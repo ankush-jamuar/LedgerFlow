@@ -21,8 +21,26 @@ graph TD
 ### Component Details
 1. **Frontend App**: Next.js 15 App Router. Styling is built using custom tokens and HSL palettes via TailwindCSS v4 and Framer Motion for premium, modern animations.
 2. **Identity & Authentication**: Clerk serves as the source of truth for identity. We support Email, Phone Number, Username, and Google OAuth. Users can sign in without emails (e.g. phone-only or username-only logins).
-3. **Database Layer**: Neon Serverless PostgreSQL with Prisma ORM. Local records represent preferences, dynamic memberships, peer-to-peer balances, and app-specific custom metadata.
+3. **Database Layer**: PostgreSQL database with Prisma ORM. Local records represent preferences, dynamic membership timelines, expenses, split configurations, settlements, CSV import sessions, anomalies, activity logs, and group messages.
 4. **Auth Sync Hook**: A transactional Next.js webhook endpoint validates payload signatures using `svix` to provision local User and Preference accounts, responding to Clerk lifecycle events.
+
+---
+
+## Database Architecture (Phase 2)
+
+LedgerFlow utilizes a fully relational schema containing the following 11 models:
+
+- **User**: Clerk identity fields (nullable email, phone, and username to support diverse authentication options).
+- **UserPreference**: Settings for theme, default currency, and notifications.
+- **Group**: Groups of members with description, status, and currency options.
+- **GroupMember**: Soft-timeline membership records (`joinedAt`, `leftAt`, `isActive`) ensuring historical expenses are audited correctly.
+- **Expense**: Core expense records supporting multi-currency fields (`originalAmount`, `originalCurrency`, `exchangeRate`, `baseAmount`).
+- **ExpenseParticipant**: Stores raw split parameters (`splitValue`) for Equal, Exact, Percentage, and Share split types.
+- **Settlement**: Peer-to-peer debt resolution records distinct from standard expenses.
+- **ImportSession**: Tracks CSV metadata, validation logs, and errors.
+- **Anomaly**: Tracks schema, dates, duplicate, and membership anomalies in imported logs.
+- **ActivityLog**: Append-only auditing logs capturing action payloads.
+- **Message**: Real-time group chat logs.
 
 ---
 
@@ -30,14 +48,15 @@ graph TD
 
 LedgerFlow automates the complexity of group expense settlements. Key requirements include:
 - **Flexible Identity Profile**: Nullable contact parameters ensure any Clerk sign-up path succeeds.
-- **Relational Integrity**: Enforces strict cascading relations from users to memberships, preferences, and calculated balance entries.
+- **Timeline-aware Membership**: GroupMember tracking allows members to leave/join dynamically while preserving historical ledger accuracy.
+- **Restrictive Deletions**: Deleting users or groups restricts deleting active financial history (Expenses, Settlements, and ImportSessions).
 - **Micro-animation Interface**: Dashboard layout shell with active item sliding indicators, overlay sheets, and glassmorphism elements.
 
 ---
 
 ## CSV Import Pipeline Workflow
 
-Phase 2 will integrate the CSV parsing engine. The planned ingestion flow:
+Phase 2 establishes the database schema for the CSV parsing engine. The planned ingestion flow:
 1. **Upload**: User drags-and-drops or selects a CSV containing expense records.
 2. **Parsing**: PapaParse extracts raw rows safely in the browser sandbox.
 3. **Validation**: Zod schema parses fields (monetary ranges, date parameters, and names).

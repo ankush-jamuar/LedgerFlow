@@ -4,19 +4,18 @@ This document defines the functional boundaries, CSV requirements, data-handling
 
 ---
 
-## Phase 1 Boundaries (Current)
+## Phase 2 Boundaries (Current)
 
 ### In Scope
-- **Scaffolded App Routing**: Full Next.js 15 App Router structure with 9 route groups (`dashboard`, `groups`, `expenses`, `settlements`, `import`, `reports`, `activity`, `chat`, `settings`).
-- **Database Architecture**: Prisma schema defining User accounts, preference states, groups, group memberships, and peer-to-peer balance tables.
-- **Provider Infrastructure**: Integration of Next Themes, TanStack Query, and Clerk authentication providers.
-- **Identity Sync System**: SVIX-secured endpoint to capture Clerk auth profile updates.
-- **Branded Design System**: TailwindCSS v4 with dark glassmorphism layout primitives, sidebar drawers, navigation tabs, and Framer Motion micro-animations.
+- **Production-Grade Database Architecture**: Prisma schema defining Users, UserPreferences, Groups, GroupMembers (with timeline state), Expenses, ExpenseParticipants, Settlements, ImportSessions, Anomalies, ActivityLogs, and Messages.
+- **Relational Integrity**: Complete schema relations, custom constraint names, database indexes, and strict delete constraints (`onDelete: Restrict` for financial tables).
+- **Compilation & Verification**: Automatic schema validation, Prisma client generation, TypeScript checking, ESLint rules, and production build checks.
 
 ### Out of Scope
 - Expense splitting and calculation engines.
-- Realtime chat webSockets or Pusher connection broadcasts.
 - Active CSV upload parsing or data writes.
+- CRUD API routes or Server Actions.
+- Realtime chat sockets or Pusher connection broadcasts.
 - Settlement calculations and direct payments.
 
 ---
@@ -39,15 +38,15 @@ The Import Center (`/import`) is designed to capture external ledger entries and
 
 ## Planned Anomaly Categories
 
-The Anomaly Engine runs validations on uploaded ledgers to flag inconsistencies. The simplified target categories are:
-- **Duplicate Expense**: Scans for identical transactions (same amount, debtor, creditor, date) in short intervals.
-- **Conflicting Duplicate**: Duplicate transaction details but with conflicting amounts or dates.
-- **Invalid Membership**: Transactions referencing users who are not active members of the group.
-- **Missing Currency**: Transactions without a valid currency identifier.
-- **Invalid Date**: Transactions with corrupted, future, or unparseable date strings.
-- **Settlement Logged As Expense**: Debt settlement transactions incorrectly cataloged as standard expenses.
-- **Unknown Member**: Transactions containing user identifiers that do not exist in the system.
-- **Negative Amount**: Expenses or settlements created with negative financial amounts.
+The Anomaly Engine runs validations on uploaded ledgers to flag inconsistencies. The simplified target categories (mapped directly to the `AnomalyType` database enum) are:
+- **DUPLICATE_EXPENSE**: Scans for identical transactions (same amount, debtor, creditor, date) in short intervals.
+- **CONFLICTING_DUPLICATE**: Duplicate transaction details but with conflicting amounts or dates.
+- **MEMBER_NOT_ACTIVE**: Transactions referencing users who are not active members of the group at that point in time.
+- **MISSING_CURRENCY**: Transactions without a valid currency identifier.
+- **INVALID_DATE**: Transactions with corrupted, future, or unparseable date strings.
+- **SETTLEMENT_AS_EXPENSE**: Debt settlement transactions incorrectly cataloged as standard expenses.
+- **UNKNOWN_MEMBER**: Transactions containing user identifiers that do not exist in the system.
+- **NEGATIVE_AMOUNT**: Expenses or settlements created with negative financial amounts.
 
 ---
 

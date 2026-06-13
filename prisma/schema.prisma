@@ -1,5 +1,5 @@
 // LedgerFlow — Prisma Schema
-// Phase 1: Production foundation with structured tables for preferences, memberships, balances, and app-specific metadata.
+// Phase 2: Production relational database architecture with robust tables for users, groups, expenses, splits, settlements, imports, anomalies, audits, and chat.
 
 datasource db {
   provider = "postgresql"
@@ -7,6 +7,58 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
+}
+
+enum GroupRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENTAGE
+  SHARES
+}
+
+enum ExpenseStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  PARTIAL
+  REVIEW_REQUIRED
+}
+
+enum AnomalySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AnomalyStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+enum AnomalyType {
+  DUPLICATE_EXPENSE
+  CONFLICTING_DUPLICATE
+  NEGATIVE_AMOUNT
+  MISSING_CURRENCY
+  INVALID_DATE
+  UNKNOWN_MEMBER
+  SETTLEMENT_AS_EXPENSE
+  MEMBER_NOT_ACTIVE
 }
 
 model User {
@@ -19,10 +71,17 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  preferences      UserPreference?
-  memberships      Membership[]
-  debtorBalances   Balance[]       @relation("DebtorBalances")
-  creditorBalances Balance[]       @relation("CreditorBalances")
+  preferences           UserPreference?
+  memberships           GroupMember[]        @relation("UserMemberships")
+  invitedMembers        GroupMember[]        @relation("InvitedMembers")
+  createdGroups         Group[]              @relation("CreatedGroups")
+  paidExpenses          Expense[]            @relation("PaidExpenses")
+  expenseParticipations ExpenseParticipant[] @relation("ParticipantExpenses")
+  sentSettlements       Settlement[]         @relation("SentSettlements")
+  receivedSettlements   Settlement[]         @relation("ReceivedSettlements")
+  uploadedImports       ImportSession[]      @relation("UploadedImports")
+  activityLogs          ActivityLog[]        @relation("ActorActivityLogs")
+  sentMessages          Message[]            @relation("SentMessages")
 }
 
 model UserPreference {
@@ -37,43 +96,199 @@ model UserPreference {
 }
 
 model Group {
-  id          String       @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
-  metadata    Json?        // App-specific metadata (group customization details)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  memberships Membership[]
-  balances    Balance[]
+  description String?
+  imageUrl    String?
+  currency    String   @default("USD")
+  isArchived  Boolean  @default(false)
+  createdById String?
+  createdBy   User?    @relation("CreatedGroups", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships    GroupMember[]
+  expenses       Expense[]
+  settlements    Settlement[]
+  importSessions ImportSession[]
+  activityLogs   ActivityLog[]
+  messages       Message[]
 }
 
-model Membership {
-  id        String   @id @default(uuid())
-  groupId   String
-  userId    String
-  role      String   @default("MEMBER") // OWNER, ADMIN, MEMBER, VIEWER
-  metadata  Json?    // App-specific membership metadata (e.g. custom shares or nicknames)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model GroupMember {
+  id          String    @id @default(uuid())
+  groupId     String
+  userId      String
+  role        GroupRole @default(MEMBER)
+  joinedAt    DateTime  @default(now())
+  leftAt      DateTime?
+  isActive    Boolean   @default(true)
+  invitedById String?
+  invitedBy   User?     @relation("InvitedMembers", fields: [invitedById], references: [id], onDelete: SetNull)
+  metadata    Json?     // App-specific membership metadata
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User  @relation("UserMemberships", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId])
+  @@index([groupId, isActive])
 }
 
-model Balance {
+model Expense {
+  id               String        @id @default(uuid())
+  groupId          String
+  paidById         String
+  splitType        SplitType     @default(EQUAL)
+  status           ExpenseStatus @default(ACTIVE)
+  description      String
+  date             DateTime
+  receiptUrl       String?
+  importSessionId  String?
+  metadata         Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Currency Audit Fields
+  originalAmount   Decimal       @db.Decimal(12, 2)
+  originalCurrency String        @db.VarChar(3)
+  exchangeRate     Decimal       @default(1.000000) @db.Decimal(18, 6)
+  baseAmount       Decimal       @db.Decimal(12, 2)
+
+  group         Group              @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  paidBy        User               @relation("PaidExpenses", fields: [paidById], references: [id], onDelete: Restrict)
+  importSession ImportSession?     @relation(fields: [importSessionId], references: [id], onDelete: SetNull)
+  participants  ExpenseParticipant[]
+  anomalies     Anomaly[]
+
+  @@index([groupId])
+  @@index([paidById])
+  @@index([date])
+  @@index([status])
+  @@index([importSessionId])
+}
+
+model ExpenseParticipant {
   id         String   @id @default(uuid())
-  groupId    String
-  debtorId   String
-  creditorId String
-  amount     Decimal  @db.Decimal(12, 2)
-  currency   String   @default("USD")
+  expenseId  String
+  userId     String
+  splitValue Decimal? @db.Decimal(12, 2) // Raw split input value (percentage, shares count, exact amount)
+  isPaid     Boolean  @default(false)
+  metadata   Json?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  debtor   User  @relation("DebtorBalances", fields: [debtorId], references: [id], onDelete: Cascade)
-  creditor User  @relation("CreditorBalances", fields: [creditorId], references: [id], onDelete: Cascade)
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation("ParticipantExpenses", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([groupId, debtorId, creditorId])
+  @@unique([expenseId, userId])
+  @@index([expenseId])
+  @@index([userId])
+}
+
+model Settlement {
+  id               String   @id @default(uuid())
+  groupId          String
+  payerId          String
+  receiverId       String
+  note             String?
+  settledAt        DateTime
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Currency Audit Fields
+  originalAmount   Decimal  @db.Decimal(12, 2)
+  originalCurrency String   @db.VarChar(3)
+  exchangeRate     Decimal  @default(1.000000) @db.Decimal(18, 6)
+  baseAmount       Decimal  @db.Decimal(12, 2)
+
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  payer    User  @relation("SentSettlements", fields: [payerId], references: [id], onDelete: Restrict)
+  receiver User  @relation("ReceivedSettlements", fields: [receiverId], references: [id], onDelete: Restrict)
+
+  @@index([groupId])
+  @@index([payerId])
+  @@index([receiverId])
+  @@index([settledAt])
+}
+
+model ImportSession {
+  id             String       @id @default(uuid())
+  groupId        String
+  uploadedById   String
+  filename       String
+  status         ImportStatus @default(PENDING)
+  rowCount       Int          @default(0)
+  processedCount Int          @default(0)
+  errorCount     Int          @default(0)
+  rawErrors      Json?        // Detailed parsing/processing errors per row
+  reportJson     Json?        // Session outcome metadata report
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  group      Group     @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  uploadedBy User      @relation("UploadedImports", fields: [uploadedById], references: [id], onDelete: Restrict)
+  expenses   Expense[]
+  anomalies  Anomaly[]
+
+  @@index([groupId])
+  @@index([uploadedById])
+  @@index([status])
+}
+
+model Anomaly {
+  id              String          @id @default(uuid())
+  importSessionId String
+  expenseId       String?
+  type            AnomalyType
+  severity        AnomalySeverity @default(MEDIUM)
+  status          AnomalyStatus   @default(OPEN)
+  payload         Json?           // Debug context or diagnostic parameters
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  importSession ImportSession @relation(fields: [importSessionId], references: [id], onDelete: Cascade)
+  expense       Expense?      @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@index([importSessionId])
+  @@index([expenseId])
+  @@index([status])
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  groupId    String?
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User?  @relation("ActorActivityLogs", fields: [actorId], references: [id], onDelete: SetNull)
+  group Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([actorId])
+  @@index([groupId])
+  @@index([entityType, entityId])
+}
+
+model Message {
+  id        String    @id @default(uuid())
+  groupId   String
+  senderId  String
+  body      String
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender User  @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([senderId])
 }
