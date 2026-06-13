@@ -1,8 +1,13 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/db/prisma";
 import { NextResponse } from "next/server";
+import {
+  getClerkDeletedUserId,
+  logPreservedClerkUserDeletion,
+  normalizeClerkWebhookUserPayload,
+  syncClerkUser,
+} from "@/lib/users/clerk-user-sync";
 
 /**
  * Clerk Webhook Sync Route
@@ -21,8 +26,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const payload = await req.json();
-  const body = JSON.stringify(payload);
+  const body = await req.text();
 
   const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
   if (!webhookSecret) {
@@ -50,60 +54,21 @@ export async function POST(req: Request) {
   const eventType = evt.type;
 
   if (eventType === "user.created" || eventType === "user.updated") {
-    const { id: clerkId, email_addresses, phone_numbers, username, image_url } = evt.data;
+    const normalizedUser = normalizeClerkWebhookUserPayload(evt.data);
 
-    if (!clerkId) {
+    if (!normalizedUser) {
       return new Response("Error: Missing user ID in event data", {
         status: 400,
       });
     }
 
-    // Clerk supports multiple emails/phone numbers. Extract primary or first if available.
-    const email = email_addresses && email_addresses.length > 0
-      ? email_addresses[0].email_address
-      : null;
-
-    const phone = phone_numbers && phone_numbers.length > 0
-      ? phone_numbers[0].phone_number
-      : null;
-
-    const normalizedUsername = username || null;
-    const imageUrl = image_url || null;
-
     try {
-      await prisma.$transaction(async (tx) => {
-        // Upsert User profile attributes
-        await tx.user.upsert({
-          where: { id: clerkId },
-          update: {
-            email,
-            phone,
-            username: normalizedUsername,
-            imageUrl,
-          },
-          create: {
-            id: clerkId,
-            email,
-            phone,
-            username: normalizedUsername,
-            imageUrl,
-          },
-        });
+      await syncClerkUser(normalizedUser);
 
-        // Initialize User Preferences if they do not exist
-        await tx.userPreference.upsert({
-          where: { userId: clerkId },
-          update: {},
-          create: {
-            userId: clerkId,
-            theme: "dark",
-            currency: "USD",
-            notificationsEnabled: true,
-          },
-        });
+      return NextResponse.json({
+        success: true,
+        message: `User ${normalizedUser.id} synchronized`,
       });
-
-      return NextResponse.json({ success: true, message: `User ${clerkId} synchronized` });
     } catch (dbError) {
       console.error("Database error while upserting user from Clerk webhook:", dbError);
       return new Response("Internal Database Error", {
@@ -113,7 +78,7 @@ export async function POST(req: Request) {
   }
 
   if (eventType === "user.deleted") {
-    const { id: clerkId } = evt.data;
+    const clerkId = getClerkDeletedUserId(evt.data);
 
     if (!clerkId) {
       return new Response("Error: Missing user ID in event data", {
@@ -121,17 +86,12 @@ export async function POST(req: Request) {
       });
     }
 
-    try {
-      await prisma.user.delete({
-        where: { id: clerkId },
-      });
-      return NextResponse.json({ success: true, message: `User ${clerkId} removed` });
-    } catch (dbError) {
-      console.error("Database error while deleting user from Clerk webhook:", dbError);
-      return new Response("Internal Database Error", {
-        status: 500,
-      });
-    }
+    logPreservedClerkUserDeletion(clerkId);
+
+    return NextResponse.json({
+      success: true,
+      message: `User ${clerkId} preserved locally`,
+    });
   }
 
   return NextResponse.json({ success: true, message: `Webhook event ${eventType} skipped` });

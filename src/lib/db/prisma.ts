@@ -16,12 +16,21 @@ const connectionString =
   process.env.DATABASE_URL ||
   "postgresql://postgres:postgres@localhost:5432/ledgerflow?sslmode=disable";
 
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  prismaPool: Pool | undefined;
 };
+
+const prismaPool =
+  globalForPrisma.prismaPool ??
+  new Pool({
+    connectionString,
+    max: 5,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+  });
+
+const adapter = new PrismaPg(prismaPool);
 
 export const prisma =
   globalForPrisma.prisma ??
@@ -35,4 +44,5 @@ export const prisma =
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
+  globalForPrisma.prismaPool = prismaPool;
 }

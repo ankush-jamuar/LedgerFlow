@@ -109,3 +109,56 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL || "..." });
 const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ adapter, log: [...] });
 ```
+
+---
+
+## Phase 3 AI Usage
+
+### Planning
+The assistant read the project context, README, scope document, ADRs, AI usage notes, Prisma schema, and existing Clerk/Prisma integration files before proposing the Phase 3 implementation plan.
+
+### Implementation
+The assistant implemented:
+- typed Clerk webhook payload normalization without `any` in sync logic
+- raw request body Svix verification using `req.text()`
+- idempotent user and preference upserts for Clerk identity mirroring
+- audit-safe `user.deleted` handling that logs and preserves local user records
+- INR as the default local user preference currency
+- authenticated preference read/update APIs
+- a settings page connected to local user preferences
+
+### Verification
+Phase 3 verification gate:
+- `npx prisma generate`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+---
+
+## Phase 3 Hotfix AI Usage
+
+### Discovery
+Real testing showed Clerk authentication and Neon connectivity working, but local `User` and `UserPreference` rows were not being created. The settings page crashed with Prisma `P2028`:
+
+```text
+Transaction API error:
+Unable to start a transaction in the given time
+```
+
+### Debugging Process
+The assistant traced the settings page loading path:
+- `src/app/(dashboard)/settings/page.tsx`
+- `ensureCurrentLocalUser()`
+- `syncClerkUser()`
+- `prisma.$transaction(...)`
+
+The failure occurred before the user/preference upserts could complete. Because local development also lacked guaranteed Clerk webhook delivery, new Clerk users could exist in Clerk while remaining absent from Neon.
+
+### Resolution
+The assistant replaced interactive transaction usage in the non-financial user synchronization path with idempotent Prisma upserts:
+- upsert local `User`
+- upsert local `UserPreference`
+- trigger lazy synchronization from authenticated dashboard requests
+
+Webhook support remains intact for production, but protected app routes no longer depend on ngrok or webhook delivery during development.

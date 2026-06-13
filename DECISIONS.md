@@ -15,14 +15,17 @@ LedgerFlow requires user records (such as names, usernames, and profile images) 
 ### Decision
 Use Clerk as the identity source of truth. Synchronize user profile updates to the local database using verified HTTP webhooks:
 - We expose a public webhook endpoint at `/api/webhooks/clerk`.
-- Payload verification is performed using `svix` to ensure that incoming requests originate from Clerk.
+- Payload verification is performed using `svix` against the raw `req.text()` body to ensure that incoming requests originate from Clerk.
 - Events handled: `user.created`, `user.updated`, `user.deleted`.
-- Webhook operations are transactionally wrapped to initialize user preferences immediately when a profile is created.
+- Webhook operations use idempotent upserts to initialize user preferences immediately when a profile is created.
+- `user.created` and `user.updated` are handled through idempotent Prisma upserts.
+- `user.deleted` is logged but does not delete local user records, preserving future financial audit history.
 
 ### Consequences
 - Decreases local authentication attack vectors.
 - Assures database relational integrity.
 - Clerk profile actions auto-replicate to LedgerFlow database entries immediately.
+- Deleting a Clerk identity does not erase local ledger identity references required for auditability.
 
 ---
 
@@ -109,3 +112,56 @@ Store raw split input values in a child table `ExpenseParticipant` rather than p
 - Prevents database drift and precision errors from stored calculations.
 - Clean database design obeying First Normal Form (1NF).
 - Facilitates changing division logic later without backfilling calculated values.
+
+---
+
+## ADR 06: LedgerFlow-Owned User Preferences
+
+### Status
+Approved
+
+### Context
+Clerk owns user identity, authentication factors, OAuth profile data, and account lifecycle events. LedgerFlow needs application-specific settings such as theme, default currency, and notification preferences. These values should not depend on Clerk profile metadata because they are product behavior settings rather than identity credentials.
+
+### Decision
+Store application preferences in the local `UserPreference` table. Initialize preferences during the same lazy synchronization flow that mirrors a Clerk user into the local database:
+- `theme`: `dark`
+- `currency`: `INR`
+- `notificationsEnabled`: `true`
+
+Clerk profile updates only update mirrored identity fields on `User`. They do not reset or overwrite `UserPreference`.
+
+### Consequences
+- Users keep app preferences across Clerk profile changes.
+- INR is the default currency for newly synchronized users.
+- Preference updates can be validated with LedgerFlow-specific Zod schemas.
+- Future financial defaults are controlled by the application database, not Clerk metadata.
+- Preference initialization remains idempotent and does not require an interactive transaction.
+
+---
+
+## ADR 07: Development-Time Lazy User Synchronization
+
+### Status
+Approved
+
+### Context
+Local Clerk webhook delivery requires a public endpoint, commonly through ngrok or a similar tunnel. That complicates development and makes local application behavior dependent on external webhook delivery. Real testing also exposed a `P2028` interactive transaction startup timeout when the settings page attempted to create missing local users through `ensureCurrentLocalUser()`.
+
+### Decision
+Authenticated dashboard requests lazily synchronize Clerk identities into the local database before protected pages render:
+- Read the current Clerk user from the authenticated request.
+- Upsert the local `User` by Clerk ID.
+- Upsert the associated `UserPreference`.
+- Continue rendering the protected feature.
+
+This lazy sync path uses plain Prisma upserts instead of an interactive `$transaction`. User and preference creation is not financial ledger mutation, and the operation is idempotent: a later request can safely repair a missing preference if the first write is interrupted. Financial mutations remain subject to stricter transaction rules in later phases.
+
+Production Clerk webhooks remain supported for prompt background synchronization, but application functionality no longer depends on webhook delivery.
+
+### Consequences
+- No ngrok dependency for local development.
+- Local user and preference records are guaranteed before protected dashboard features load.
+- Settings no longer crashes because a local user is missing.
+- Avoids Neon/PostgreSQL interactive transaction startup timeouts for non-financial identity bootstrapping.
+- Webhooks still verify signatures and handle `user.created`, `user.updated`, and `user.deleted`.

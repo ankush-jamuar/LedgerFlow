@@ -6,7 +6,7 @@ LedgerFlow is a modern, high-performance shared expense reconciliation platform 
 
 ## Architecture Overview
 
-LedgerFlow is engineered using Next.js 15, React 19, TypeScript, TailwindCSS v4, Prisma ORM, and PostgreSQL.
+LedgerFlow is engineered using Next.js 16, React 19, TypeScript, TailwindCSS v4, Prisma ORM, and PostgreSQL.
 
 ```mermaid
 graph TD
@@ -15,18 +15,28 @@ graph TD
     Clerk -- Webhook Events --> WebhookHandler[Clerk Sync Webhook Handler]
     WebhookHandler --> DB[(PostgreSQL Database)]
     AppRouter --> Prisma[Prisma ORM Client]
+    AppRouter -- Lazy User Sync --> DB
     Prisma --> DB
 ```
 
 ### Component Details
-1. **Frontend App**: Next.js 15 App Router. Styling is built using custom tokens and HSL palettes via TailwindCSS v4 and Framer Motion for premium, modern animations.
+1. **Frontend App**: Next.js 16 App Router. Styling is built using custom tokens and HSL palettes via TailwindCSS v4 and Framer Motion for premium, modern animations.
 2. **Identity & Authentication**: Clerk serves as the source of truth for identity. We support Email, Phone Number, Username, and Google OAuth. Users can sign in without emails (e.g. phone-only or username-only logins).
 3. **Database Layer**: PostgreSQL database with Prisma ORM. Local records represent preferences, dynamic membership timelines, expenses, split configurations, settlements, CSV import sessions, anomalies, activity logs, and group messages.
-4. **Auth Sync Hook**: A transactional Next.js webhook endpoint validates payload signatures using `svix` to provision local User and Preference accounts, responding to Clerk lifecycle events.
+4. **Auth Sync Hook**: Protected requests lazily provision local User and Preference accounts. A verified Next.js webhook endpoint also validates Clerk lifecycle payload signatures with `svix` for production synchronization.
 
 ---
 
-## Database Architecture (Phase 2)
+## Current Status
+
+Completed:
+- **Phase 1**: Next.js, Clerk, routing, layout, design system, environment validation.
+- **Phase 2**: Relational Prisma schema, constraints, indexes, and database documentation.
+- **Phase 3**: Clerk user synchronization, local user preference initialization, and settings preference updates.
+
+---
+
+## Database Architecture
 
 LedgerFlow utilizes a fully relational schema containing the following 11 models:
 
@@ -41,6 +51,34 @@ LedgerFlow utilizes a fully relational schema containing the following 11 models
 - **Anomaly**: Tracks schema, dates, duplicate, and membership anomalies in imported logs.
 - **ActivityLog**: Append-only auditing logs capturing action payloads.
 - **Message**: Real-time group chat logs.
+
+---
+
+## User Synchronization & Preferences (Phase 3)
+
+Clerk remains the source of truth for identity. LedgerFlow mirrors selected Clerk profile fields into the local `User` table so future groups, expenses, settlements, imports, and audit logs can enforce relational integrity.
+
+Local development does not depend on Clerk webhook delivery. Every protected dashboard request lazily synchronizes the authenticated Clerk user into the local database before rendering application pages. This creates or updates:
+- the local `User` record
+- the associated `UserPreference` record
+
+The Clerk webhook endpoint is:
+
+```text
+POST /api/webhooks/clerk
+```
+
+Handled Clerk events:
+- `user.created`: upserts the local user and initializes preferences.
+- `user.updated`: updates mirrored identity fields without resetting preferences.
+- `user.deleted`: logs the event and preserves the local user record for financial auditability.
+
+Webhook signatures are verified with `svix` against the raw request body from `req.text()`. User synchronization is idempotent through Prisma `upsert` calls. Preference defaults are:
+- `theme`: `dark`
+- `currency`: `INR`
+- `notificationsEnabled`: `true`
+
+The settings page allows authenticated users to update their LedgerFlow-owned preferences without modifying Clerk identity data.
 
 ---
 

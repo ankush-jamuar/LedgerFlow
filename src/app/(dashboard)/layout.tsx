@@ -8,12 +8,15 @@
 
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { ensureCurrentLocalUser } from "@/lib/users/current-user";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await ensureCurrentLocalUser();
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Desktop sidebar — hidden on mobile */}
