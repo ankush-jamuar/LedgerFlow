@@ -4,7 +4,7 @@ This document defines the functional boundaries, CSV requirements, data-handling
 
 ---
 
-## Phase 10 Boundaries (Current)
+## Phase 11 Boundaries (Current)
 
 ### In Scope
 - **Clerk User Synchronization**: Verified Clerk webhooks upsert local `User` records for `user.created` and `user.updated` events.
@@ -22,6 +22,9 @@ This document defines the functional boundaries, CSV requirements, data-handling
 - **Import Validation**: Required CSV headers are validated, participant identifiers are resolved against group members, and all supported split types are checked before writes.
 - **Anomaly Detection**: Imports create `Anomaly` rows for duplicate expenses, conflicting duplicates, invalid dates, missing currency, unknown members, settlement-like descriptions, negative amounts, and inactive members.
 - **Import Reports**: Each import session stores a report with row totals, created expense IDs, rejected row explanations, anomaly counts, currency coverage, settlement-like row counts, and processing time.
+- **Dashboard Aggregation Layer**: Authenticated dashboard APIs aggregate overview, activity, import, anomaly, group, expense, settlement, and reporting metrics from existing records.
+- **Dashboard Access Boundary**: Dashboard metrics are scoped to groups where the current user has an active membership.
+- **Reporting Aggregations**: Monthly spending, monthly settlements, top payers, top debtors, top creditors, currency breakdowns, and import statistics are computed from source rows without persisted snapshots.
 - **Activity Logs**: Group, membership, expense, and settlement mutations write `ActivityLog` records.
 - **Webhook Verification**: Svix signatures are verified against the raw request body before event processing.
 - **Idempotent Database Writes**: User and preference synchronization uses Prisma upserts without interactive transactions.
@@ -31,6 +34,7 @@ This document defines the functional boundaries, CSV requirements, data-handling
 
 ### Out of Scope
 - CSV import UI workflows.
+- Dashboard UI and visual components.
 - Realtime chat sockets or Pusher connection broadcasts.
 - Direct payments or payment-provider integrations.
 - Persisted balance snapshots or balance tables.
@@ -71,3 +75,4 @@ The Anomaly Engine runs validations on uploaded ledgers to flag inconsistencies.
 
 ## Future Enhancements
 - Automated multi-currency reconciliation using live exchange rates.
+- Persisted dashboard caches if production data volume later requires them.

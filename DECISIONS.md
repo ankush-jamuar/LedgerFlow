@@ -332,3 +332,51 @@ Generate import reports in `src/lib/reports` and persist the result in `ImportSe
 - Import sessions are self-contained audit artifacts.
 - API consumers can render reports without recomputing validation.
 - Rejected rows remain explainable even if source CSV context is later unavailable.
+
+---
+
+## ADR 15: Dashboard Aggregation Strategy
+
+### Status
+Approved
+
+### Context
+LedgerFlow needs dashboard APIs for high-level product metrics, recent records, anomaly summaries, and reporting views. The project already stores source-of-truth rows for groups, memberships, expenses, settlements, imports, anomalies, and activity logs.
+
+### Decision
+Add a backend-only dashboard aggregation layer under `src/lib/dashboard`:
+- Route handlers under `/api/dashboard/*` authenticate with the existing Clerk-backed local user flow.
+- Services scope all metrics to groups where the current user has an active `GroupMember` row.
+- Aggregations read from existing Prisma models and do not introduce new tables, snapshots, or mock data.
+- Recent activity is sourced from `ActivityLog` and limited to dashboard-relevant actions.
+- Outstanding balance is derived by reusing the existing balance engine for accessible groups.
+
+### Consequences
+- Dashboard APIs respect the existing permission boundary.
+- No schema migration is required for Phase 11.
+- Dashboard values are always current because they are computed from live source records.
+- Large datasets may require future caching, but correctness remains the first priority.
+
+---
+
+## ADR 16: Analytics Computation Architecture
+
+### Status
+Approved
+
+### Context
+Analytics endpoints need totals, averages, monthly buckets, top payer/debtor/creditor rankings, currency breakdowns, and import statistics. These values overlap with existing balance, expense, settlement, import, and anomaly domains.
+
+### Decision
+Keep analytics computation in service modules rather than route handlers:
+- `overview.ts` computes top-level dashboard metrics.
+- `activity.ts` handles activity filtering and query validation.
+- `analytics.ts` contains group, expense, settlement, date-range, money, and access helper logic.
+- `reports.ts` computes recent imports, anomaly overview, monthly reporting, participant rankings, and import statistics.
+- Money values are converted from Prisma decimals and rounded consistently at service boundaries.
+- Month buckets use source dates (`Expense.date` and `Settlement.settledAt`) rather than creation timestamps.
+
+### Consequences
+- Routes remain thin and consistent with prior phases.
+- Shared helpers avoid metric drift across endpoints.
+- Reporting remains reconstructable from source rows and does not create persisted summary state.

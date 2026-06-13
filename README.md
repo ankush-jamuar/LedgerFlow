@@ -40,6 +40,7 @@ Completed:
 - **Phase 8**: Backend CSV import engine with PapaParse parsing, Zod request validation, transaction-backed expense creation, and import session tracking.
 - **Phase 9**: Anomaly detection for duplicates, invalid values, unknown members, settlement-like rows, and timeline membership violations.
 - **Phase 10**: Import report generation with row counts, rejected row explanations, anomaly summaries, created expense IDs, and processing time.
+- **Phase 11**: Dashboard aggregation APIs for overview metrics, recent activity, imports, anomalies, group analytics, expense analytics, settlement analytics, and reporting summaries.
 
 ---
 
@@ -99,6 +100,7 @@ LedgerFlow backend business logic is organized by domain under `src/lib`:
 - `settlements`: settlement lifecycle, validation, and settlement history.
 - `imports`: CSV parsing, row validation, anomaly detection, and transactional import writes.
 - `reports`: import report generation for audit and review.
+- `dashboard`: authenticated aggregation services for dashboard overview, activity, analytics, and reporting endpoints.
 
 Route handlers under `src/app/api` are intentionally thin. They authenticate the current Clerk-backed local user, validate request bodies with Zod, call the relevant service, and serialize the response.
 
@@ -152,6 +154,25 @@ The ingestion flow:
 8. Update `ImportSession` to `COMPLETED`, `PARTIAL`, or `FAILED`.
 
 Rejected rows are not silently dropped. Each rejected row is included in `rawErrors` and the import report with human-readable explanations.
+
+---
+
+## Dashboard Aggregation APIs
+
+Phase 11 adds backend-only dashboard APIs. These endpoints use the existing authentication flow and aggregate only records from groups where the current user has an active membership.
+
+```text
+GET /api/dashboard/overview
+GET /api/dashboard/activity?limit=20
+GET /api/dashboard/imports
+GET /api/dashboard/anomalies
+GET /api/dashboard/groups
+GET /api/dashboard/expenses
+GET /api/dashboard/settlements
+GET /api/dashboard/reports
+```
+
+Metrics are computed from real `Group`, `Expense`, `Settlement`, `ImportSession`, `Anomaly`, and `ActivityLog` rows. Dashboard routes do not contain business logic; they authenticate, parse small query inputs where needed, call `src/lib/dashboard`, and return JSON.
 
 ---
 

@@ -210,3 +210,27 @@ Phase 8-10 verification gate:
 - `npm run lint`
 - `npm run typecheck`
 - `npm run build`
+
+---
+
+## Phase 11 AI Usage
+
+### Planning
+The assistant read the current Prisma schema, import service, balance service, activity logging helper, API route conventions, README, scope document, ADRs, and AI usage notes before implementing dashboard aggregation.
+
+### Implementation
+The assistant implemented backend-only dashboard services and APIs for:
+- overview totals and outstanding balance
+- recent dashboard activity from `ActivityLog`
+- recent imports with imported/rejected row and anomaly counts
+- anomaly overview by type, severity, status, and recent records
+- group, expense, and settlement analytics
+- reporting aggregations for monthly spending, monthly settlements, top payers, top debtors, top creditors, currency breakdown, and import statistics
+
+All route handlers remain thin and all metrics are scoped to groups where the authenticated user has an active membership.
+
+### Verification
+Phase 11 verification gate:
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
