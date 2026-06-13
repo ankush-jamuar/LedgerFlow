@@ -4,7 +4,7 @@ This document defines the functional boundaries, CSV requirements, data-handling
 
 ---
 
-## Phase 7 Boundaries (Current)
+## Phase 10 Boundaries (Current)
 
 ### In Scope
 - **Clerk User Synchronization**: Verified Clerk webhooks upsert local `User` records for `user.created` and `user.updated` events.
@@ -18,6 +18,10 @@ This document defines the functional boundaries, CSV requirements, data-handling
 - **Expense Membership Validation**: Expense participants and payers must be members during the expense date interval.
 - **Balance Engine**: Group balances, member net positions, totals, and simplified settlement suggestions are computed from source records only.
 - **Settlement Engine**: Settlements are recorded separately from expenses and affect computed balances without mutating historical expenses.
+- **CSV Import Engine**: Backend routes create, list, and retrieve import sessions while parsing CSV content into candidate expenses.
+- **Import Validation**: Required CSV headers are validated, participant identifiers are resolved against group members, and all supported split types are checked before writes.
+- **Anomaly Detection**: Imports create `Anomaly` rows for duplicate expenses, conflicting duplicates, invalid dates, missing currency, unknown members, settlement-like descriptions, negative amounts, and inactive members.
+- **Import Reports**: Each import session stores a report with row totals, created expense IDs, rejected row explanations, anomaly counts, currency coverage, settlement-like row counts, and processing time.
 - **Activity Logs**: Group, membership, expense, and settlement mutations write `ActivityLog` records.
 - **Webhook Verification**: Svix signatures are verified against the raw request body before event processing.
 - **Idempotent Database Writes**: User and preference synchronization uses Prisma upserts without interactive transactions.
@@ -26,7 +30,7 @@ This document defines the functional boundaries, CSV requirements, data-handling
 - **Compilation & Verification**: Automatic schema validation, Prisma client generation, TypeScript checking, ESLint rules, and production build checks.
 
 ### Out of Scope
-- CSV import data writes.
+- CSV import UI workflows.
 - Realtime chat sockets or Pusher connection broadcasts.
 - Direct payments or payment-provider integrations.
 - Persisted balance snapshots or balance tables.
@@ -39,9 +43,10 @@ This document defines the functional boundaries, CSV requirements, data-handling
 The Import Center (`/import`) is designed to capture external ledger entries and reconcile them against groups.
 
 ### Objectives
-1. **Zero-Lock Parsing**: Client-side PapaParse parsing prevents memory spikes on large uploads.
-2. **Schema Isolation**: Zod validates CSV headers, date formats, and numeric types.
-3. **Transaction Safety**: Imports must succeed as a single transaction unit, ensuring no partial ledgers are written.
+1. **Backend Parsing**: Server-side PapaParse parsing supports JSON and multipart uploads through the same service layer.
+2. **Schema Isolation**: Zod validates request payloads, while import validation validates CSV headers, date formats, numeric values, currencies, members, and split semantics.
+3. **Transaction Safety**: Accepted financial writes are created inside one Prisma transaction. If the financial write phase fails, no expense subset is committed.
+4. **Auditability**: Rejected rows always include explanations, and anomaly payloads include row numbers, raw row context, and related expense identifiers when available.
 
 ### Known Data Problems & Handling Strategy
 - **Null Contact Names**: Maps names to username or fallback string, never crashing.
@@ -53,8 +58,8 @@ The Import Center (`/import`) is designed to capture external ledger entries and
 ## Planned Anomaly Categories
 
 The Anomaly Engine runs validations on uploaded ledgers to flag inconsistencies. The simplified target categories (mapped directly to the `AnomalyType` database enum) are:
-- **DUPLICATE_EXPENSE**: Scans for identical transactions (same amount, debtor, creditor, date) in short intervals.
-- **CONFLICTING_DUPLICATE**: Duplicate transaction details but with conflicting amounts or dates.
+- **DUPLICATE_EXPENSE**: Scans for identical transactions by same amount, date, payer, and normalized description.
+- **CONFLICTING_DUPLICATE**: Similar transaction details with conflicting amount or currency values.
 - **MEMBER_NOT_ACTIVE**: Transactions referencing users who are not active members of the group at that point in time.
 - **MISSING_CURRENCY**: Transactions without a valid currency identifier.
 - **INVALID_DATE**: Transactions with corrupted, future, or unparseable date strings.
@@ -65,4 +70,4 @@ The Anomaly Engine runs validations on uploaded ledgers to flag inconsistencies.
 ---
 
 ## Future Enhancements
-- Automated multi-currency reconciliation.
+- Automated multi-currency reconciliation using live exchange rates.

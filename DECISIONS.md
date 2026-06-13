@@ -255,3 +255,80 @@ Keep settlements in the `Settlement` table only. Settlement services validate pa
 - Expenses remain an immutable spending record.
 - Settlements can be audited independently.
 - Balance calculation can apply settlements as net-balance adjustments without polluting expense participant logic.
+
+---
+
+## ADR 12: Import Session Architecture
+
+### Status
+Approved
+
+### Context
+CSV imports can create many expense rows from untrusted external data. The system needs a durable audit record of who uploaded the file, how many rows were processed, which rows were imported, and which rows were rejected.
+
+### Decision
+Use `ImportSession` as the lifecycle container for every CSV upload:
+- API routes remain thin and delegate to `src/lib/imports`.
+- `POST /api/groups/[groupId]/imports` creates the session, parses CSV, validates rows, stores anomalies, writes accepted expenses, and persists the report.
+- `GET /api/groups/[groupId]/imports` lists sessions for a group.
+- `GET /api/imports/[importSessionId]` returns a detailed session with expenses and anomalies.
+- The service accepts multipart `file` uploads and JSON `{ filename, csv }` payloads.
+- Accepted expense writes happen inside a Prisma transaction with anomaly creation, report storage, and completion logs.
+
+### Consequences
+- Every import has a stable ID for review and audit.
+- Financial writes do not partially commit if the write transaction fails.
+- Import status reflects the outcome as `COMPLETED`, `PARTIAL`, or `FAILED`.
+
+---
+
+## ADR 13: Anomaly Detection Strategy
+
+### Status
+Approved
+
+### Context
+External ledgers commonly contain duplicate transactions, repayment notes mislabeled as expenses, unknown participants, inactive members, malformed dates, and missing currencies. Rejecting these silently would make reconciliation untrustworthy.
+
+### Decision
+Detect anomalies before financial writes and store them in the existing `Anomaly` model:
+- `DUPLICATE_EXPENSE`: same amount, date, payer, and normalized description.
+- `CONFLICTING_DUPLICATE`: similar expense identity with conflicting amount or currency.
+- `NEGATIVE_AMOUNT`: amount is missing, invalid, or less than or equal to zero.
+- `MISSING_CURRENCY`: currency is blank or cannot normalize to an ISO-style code.
+- `INVALID_DATE`: date is invalid or future-dated.
+- `UNKNOWN_MEMBER`: payer or participant cannot be resolved from group member identifiers.
+- `SETTLEMENT_AS_EXPENSE`: description contains repayment language such as "paid back", "returned money", "settled", or "reimbursement".
+- `MEMBER_NOT_ACTIVE`: payer or participant fails the existing membership timeline predicate.
+
+Anomaly payloads include row number, raw CSV row context, the triggering field, and related expense context when available.
+
+### Consequences
+- Reviewers can understand why every row was rejected.
+- Duplicate and timeline logic stays aligned with existing expense membership rules.
+- Settlement-like rows are detected without creating settlement records implicitly.
+
+---
+
+## ADR 14: Import Report Generation
+
+### Status
+Approved
+
+### Context
+An import result must be readable without re-running detection logic. Product, support, and audit workflows need totals, created record IDs, anomaly breakdowns, and row-level rejection reasons.
+
+### Decision
+Generate import reports in `src/lib/reports` and persist the result in `ImportSession.reportJson`. Reports contain:
+- total rows, processed rows, imported rows, and rejected rows
+- anomaly count and counts by anomaly type
+- total imported amount and currencies encountered
+- created expense IDs
+- settlement-like rows detected
+- processing time in milliseconds
+- rejected row details with explanations
+
+### Consequences
+- Import sessions are self-contained audit artifacts.
+- API consumers can render reports without recomputing validation.
+- Rejected rows remain explainable even if source CSV context is later unavailable.

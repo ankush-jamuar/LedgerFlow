@@ -186,3 +186,27 @@ The implementation was checked with TypeScript during development to catch route
 - `npm run lint`
 - `npm run typecheck`
 - `npm run build`
+
+---
+
+## Phases 8-10 AI Usage
+
+### Planning
+The assistant read the existing Prisma schema, expense service, settlement service, membership timeline rules, API route patterns, activity logging helper, README, scope document, and ADRs before implementing the import backend.
+
+### Implementation
+The assistant implemented backend-only modules for:
+- CSV import parsing and required header validation with PapaParse
+- JSON and multipart upload handling for group import routes
+- row validation for amount, currency, date, payer, participants, split type, and split math
+- anomaly detection for all required `AnomalyType` enum values
+- transaction-backed creation of accepted expense rows and anomaly records
+- import report generation in `src/lib/reports`
+- import session list/detail APIs
+- activity logs for import lifecycle, anomaly creation, and report generation
+
+### Verification
+Phase 8-10 verification gate:
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`

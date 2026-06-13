@@ -37,6 +37,9 @@ Completed:
 - **Phase 5**: Expense CRUD with Equal, Exact, Percentage, and Shares split validation.
 - **Phase 6**: Pure balance computation with traceable source expenses and debt simplification.
 - **Phase 7**: Settlement creation, listing, history, updates, and settlement activity logs.
+- **Phase 8**: Backend CSV import engine with PapaParse parsing, Zod request validation, transaction-backed expense creation, and import session tracking.
+- **Phase 9**: Anomaly detection for duplicates, invalid values, unknown members, settlement-like rows, and timeline membership violations.
+- **Phase 10**: Import report generation with row counts, rejected row explanations, anomaly summaries, created expense IDs, and processing time.
 
 ---
 
@@ -94,6 +97,8 @@ LedgerFlow backend business logic is organized by domain under `src/lib`:
 - `expenses`: expense lifecycle and raw split configuration validation.
 - `balances`: pure read-time balance calculation and debt simplification.
 - `settlements`: settlement lifecycle, validation, and settlement history.
+- `imports`: CSV parsing, row validation, anomaly detection, and transactional import writes.
+- `reports`: import report generation for audit and review.
 
 Route handlers under `src/app/api` are intentionally thin. They authenticate the current Clerk-backed local user, validate request bodies with Zod, call the relevant service, and serialize the response.
 
@@ -123,11 +128,30 @@ LedgerFlow automates the complexity of group expense settlements. Key requiremen
 
 ## CSV Import Pipeline Workflow
 
-Phase 2 establishes the database schema for the CSV parsing engine. The planned ingestion flow:
-1. **Upload**: User drags-and-drops or selects a CSV containing expense records.
-2. **Parsing**: PapaParse extracts raw rows safely in the browser sandbox.
-3. **Validation**: Zod schema parses fields (monetary ranges, date parameters, and names).
-4. **Ingestion**: Server action verifies permissions, checks for anomalies, maps expenses to members, and updates active balances transactionally.
+The backend import engine exposes:
+- `POST /api/groups/[groupId]/imports`
+- `GET /api/groups/[groupId]/imports`
+- `GET /api/imports/[importSessionId]`
+
+The POST route accepts either multipart `file` upload or JSON `{ "filename": "...", "csv": "..." }`. Required CSV headers are:
+
+```text
+date,description,amount,currency,paidBy,participants,splitType
+```
+
+Supported split types are `EQUAL`, `EXACT`, `PERCENTAGE`, and `SHARES`. Equal splits use participant identifiers such as `alice;bob`; other split types use `identifier:value` pairs such as `alice:60;bob:40`.
+
+The ingestion flow:
+1. Create an `ImportSession` and log `IMPORT_STARTED`.
+2. Parse CSV rows with PapaParse.
+3. Validate row shape, money, currency, dates, split semantics, and group member resolution.
+4. Detect anomalies, including duplicate expenses and timeline membership violations.
+5. Create accepted expenses in a Prisma transaction.
+6. Store anomaly rows with row-level payload context.
+7. Generate and persist the import report.
+8. Update `ImportSession` to `COMPLETED`, `PARTIAL`, or `FAILED`.
+
+Rejected rows are not silently dropped. Each rejected row is included in `rawErrors` and the import report with human-readable explanations.
 
 ---
 
@@ -162,5 +186,4 @@ npm run build
 
 ## Future Enhancements
 - **Multi-currency Settlement Logic**: Live FX conversions for settle-ups.
-- **Anomaly Detection Engine**: Auto-flags suspicious entries (e.g., duplicated CSV records).
 - **Audit Trails**: Pusher-powered real-time log feed displaying settlement histories.
