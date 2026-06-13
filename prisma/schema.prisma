@@ -1,0 +1,79 @@
+// LedgerFlow — Prisma Schema
+// Phase 1: Production foundation with structured tables for preferences, memberships, balances, and app-specific metadata.
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id // Clerk User ID (source of truth)
+  email     String?
+  phone     String?
+  username  String?  @unique
+  imageUrl  String?
+  metadata  Json?    // App-specific metadata on User
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  preferences      UserPreference?
+  memberships      Membership[]
+  debtorBalances   Balance[]       @relation("DebtorBalances")
+  creditorBalances Balance[]       @relation("CreditorBalances")
+}
+
+model UserPreference {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme                String   @default("dark")
+  currency             String   @default("USD")
+  notificationsEnabled Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model Group {
+  id          String       @id @default(uuid())
+  name        String
+  metadata    Json?        // App-specific metadata (group customization details)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+  balances    Balance[]
+}
+
+model Membership {
+  id        String   @id @default(uuid())
+  groupId   String
+  userId    String
+  role      String   @default("MEMBER") // OWNER, ADMIN, MEMBER, VIEWER
+  metadata  Json?    // App-specific membership metadata (e.g. custom shares or nicknames)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+}
+
+model Balance {
+  id         String   @id @default(uuid())
+  groupId    String
+  debtorId   String
+  creditorId String
+  amount     Decimal  @db.Decimal(12, 2)
+  currency   String   @default("USD")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  debtor   User  @relation("DebtorBalances", fields: [debtorId], references: [id], onDelete: Cascade)
+  creditor User  @relation("CreditorBalances", fields: [creditorId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, debtorId, creditorId])
+}

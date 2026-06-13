@@ -1,0 +1,145 @@
+/**
+ * src/app/globals.css — Global Styles & Design System Tokens
+ *
+ * LedgerFlow design system built on TailwindCSS v4 using @theme.
+ * All design tokens are defined here as CSS custom properties and
+ * made available as Tailwind utilities throughout the application.
+ *
+ * Color palette:
+ *   Background: #050816  (deep space dark)
+ *   Primary:    #7C3AED  (violet)
+ *   Secondary:  #06B6D4  (cyan)
+ *   Success:    #22C55E  (green)
+ *   Danger:     #EF4444  (red)
+ */
+
+@import "tailwindcss";
+
+@theme {
+  /* === Typography === */
+  --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
+
+  /* === Brand Colors === */
+  --color-brand-bg:        #050816;
+  --color-brand-surface:   #0d1117;
+  --color-brand-border:    rgba(255, 255, 255, 0.08);
+
+  --color-primary:         #7C3AED;
+  --color-primary-light:   #8B5CF6;
+  --color-primary-dark:    #6D28D9;
+  --color-primary-ghost:   rgba(124, 58, 237, 0.12);
+
+  --color-secondary:       #06B6D4;
+  --color-secondary-light: #22D3EE;
+  --color-secondary-dark:  #0891B2;
+  --color-secondary-ghost: rgba(6, 182, 212, 0.12);
+
+  --color-success:         #22C55E;
+  --color-success-ghost:   rgba(34, 197, 94, 0.12);
+
+  --color-danger:          #EF4444;
+  --color-danger-ghost:    rgba(239, 68, 68, 0.12);
+
+  --color-warning:         #F59E0B;
+  --color-warning-ghost:   rgba(245, 158, 11, 0.12);
+
+  /* === Text === */
+  --color-text-primary:    #F1F5F9;
+  --color-text-secondary:  #94A3B8;
+  --color-text-muted:      #475569;
+
+  /* === Glassmorphism === */
+  --glass-bg:              rgba(255, 255, 255, 0.04);
+  --glass-border:          rgba(255, 255, 255, 0.08);
+  --glass-blur:            12px;
+
+  /* === Sidebar === */
+  --sidebar-width:         16rem;
+  --sidebar-collapsed:     4rem;
+
+  /* === Spacing === */
+  --radius-sm: 0.375rem;
+  --radius:    0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+/* ===== Base Reset ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100%;
+  background-color: var(--color-brand-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ===== Selection ===== */
+::selection {
+  background-color: var(--color-primary-ghost);
+  color: var(--color-primary-light);
+}
+
+/* ===== Focus Visible ===== */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ===== Glassmorphism Utility ===== */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+/* ===== Gradient Utilities ===== */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== Glow Utilities ===== */
+.glow-primary {
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.3), 0 0 60px rgba(124, 58, 237, 0.1);
+}
+
+.glow-secondary {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 0 60px rgba(6, 182, 212, 0.1);
+}
