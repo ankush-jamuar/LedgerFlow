@@ -165,3 +165,93 @@ Production Clerk webhooks remain supported for prompt background synchronization
 - Settings no longer crashes because a local user is missing.
 - Avoids Neon/PostgreSQL interactive transaction startup timeouts for non-financial identity bootstrapping.
 - Webhooks still verify signatures and handle `user.created`, `user.updated`, and `user.deleted`.
+
+---
+
+## ADR 08: Membership Validation Strategy
+
+### Status
+Approved
+
+### Context
+LedgerFlow groups are timeline-aware. A member can leave a group, but historical expenses must remain auditable. Expense participation must therefore be validated against membership dates, not only current membership status.
+
+### Decision
+Use the existing `GroupMember` row as the membership interval for a user in a group. A member is eligible for an expense only when:
+
+```text
+expenseDate >= joinedAt
+AND (leftAt IS NULL OR expenseDate <= leftAt)
+```
+
+Removing a member soft-closes the membership by setting `leftAt = now()` and `isActive = false`. Membership rows are never physically deleted by domain services.
+
+### Consequences
+- Historical ledger rows remain explainable after a member leaves.
+- Expense creation rejects users who were not members on the expense date.
+- Role and membership changes can be audited through `ActivityLog`.
+- The current schema supports one interval per group/user pair because of `@@unique([groupId, userId])`; future multi-interval rejoin history would require a schema migration.
+
+---
+
+## ADR 09: Balance Calculation Architecture
+
+### Status
+Approved
+
+### Context
+Persisting balances introduces drift risk because balances can be invalidated by expense edits, membership corrections, or settlement updates. Interviewers and auditors need to see the source rows behind every result.
+
+### Decision
+Do not create balance tables. Compute group balances at read time from:
+- active `Expense` rows
+- `ExpenseParticipant` raw split configuration
+- `Settlement` rows
+
+Each balance result includes totals, per-member net balances, simplified settlement suggestions, and source metadata linking amounts back to expenses and settlements.
+
+### Consequences
+- No stored balance drift.
+- Balance output remains fully traceable.
+- Reads do more computation, but the current product phase favors correctness and auditability over cached projections.
+
+---
+
+## ADR 10: Debt Simplification Algorithm
+
+### Status
+Approved
+
+### Context
+Raw balances can produce many pairwise obligations. For example, A may owe B and B may owe C, but the optimal settlement graph can collapse that chain into A paying C.
+
+### Decision
+Use a two-pointer debt simplification algorithm:
+- Partition members into debtors with negative net balances and creditors with positive net balances.
+- Sort both sides by absolute amount descending.
+- Match the largest debtor against the largest creditor.
+- Emit a settlement suggestion for the matched amount.
+- Reduce both remaining balances and advance pointers when a side reaches zero.
+
+### Consequences
+- Produces a minimal practical settlement graph for the group net positions.
+- Does not mutate expenses or settlements.
+- Each suggestion carries source expense and settlement identifiers for explanation.
+
+---
+
+## ADR 11: Settlement Isolation Strategy
+
+### Status
+Approved
+
+### Context
+Settlements represent debt repayment, not new shared expenses. Treating settlements as expenses would conflate spending with repayment and risk double counting balances.
+
+### Decision
+Keep settlements in the `Settlement` table only. Settlement services validate payer/receiver membership, positive amount, distinct parties, and group existence. Settlements affect computed balances but never modify expense history or create expense rows.
+
+### Consequences
+- Expenses remain an immutable spending record.
+- Settlements can be audited independently.
+- Balance calculation can apply settlements as net-balance adjustments without polluting expense participant logic.

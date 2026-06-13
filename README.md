@@ -33,6 +33,10 @@ Completed:
 - **Phase 1**: Next.js, Clerk, routing, layout, design system, environment validation.
 - **Phase 2**: Relational Prisma schema, constraints, indexes, and database documentation.
 - **Phase 3**: Clerk user synchronization, local user preference initialization, and settings preference updates.
+- **Phase 4**: Group CRUD, membership timeline operations, role enforcement, and group activity logs.
+- **Phase 5**: Expense CRUD with Equal, Exact, Percentage, and Shares split validation.
+- **Phase 6**: Pure balance computation with traceable source expenses and debt simplification.
+- **Phase 7**: Settlement creation, listing, history, updates, and settlement activity logs.
 
 ---
 
@@ -82,12 +86,37 @@ The settings page allows authenticated users to update their LedgerFlow-owned pr
 
 ---
 
+## Backend Services (Phases 4-7)
+
+LedgerFlow backend business logic is organized by domain under `src/lib`:
+- `groups`: group creation, updates, archive behavior, and group reads.
+- `memberships`: soft membership removal, role changes, member lists, and timeline reads.
+- `expenses`: expense lifecycle and raw split configuration validation.
+- `balances`: pure read-time balance calculation and debt simplification.
+- `settlements`: settlement lifecycle, validation, and settlement history.
+
+Route handlers under `src/app/api` are intentionally thin. They authenticate the current Clerk-backed local user, validate request bodies with Zod, call the relevant service, and serialize the response.
+
+Membership validity is date-bound. A user can participate in an expense only when:
+
+```text
+expenseDate >= joinedAt
+AND (leftAt IS NULL OR expenseDate <= leftAt)
+```
+
+Balances are never persisted. They are computed from active expenses, expense participants, and settlements. Each balance response includes source expense and settlement metadata so owed amounts can be explained during audit or interview review.
+
+Settlements are isolated from expenses. They reduce balances but never mutate or replace expense history.
+
+---
+
 ## Business Requirements & Scope
 
 LedgerFlow automates the complexity of group expense settlements. Key requirements include:
 - **Flexible Identity Profile**: Nullable contact parameters ensure any Clerk sign-up path succeeds.
 - **Timeline-aware Membership**: GroupMember tracking allows members to leave/join dynamically while preserving historical ledger accuracy.
 - **Restrictive Deletions**: Deleting users or groups restricts deleting active financial history (Expenses, Settlements, and ImportSessions).
+- **Computed Balances**: Balances are derived at read time from immutable financial source records.
 - **Micro-animation Interface**: Dashboard layout shell with active item sliding indicators, overlay sheets, and glassmorphism elements.
 
 ---

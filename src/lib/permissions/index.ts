@@ -11,16 +11,14 @@
  * - OWNER: Full control including deletion and member management
  * - ADMIN: Can manage expenses and members but cannot delete the group
  * - MEMBER: Can view, add expenses and participate in settlements
- * - VIEWER: Read-only access
  */
-export const GROUP_ROLES = ["OWNER", "ADMIN", "MEMBER", "VIEWER"] as const;
+export const GROUP_ROLES = ["OWNER", "ADMIN", "MEMBER"] as const;
 export type GroupRole = (typeof GROUP_ROLES)[number];
 
 /**
  * Ordered role hierarchy — higher index = higher privilege.
  */
 const ROLE_HIERARCHY: Record<GroupRole, number> = {
-  VIEWER: 0,
   MEMBER: 1,
   ADMIN: 2,
   OWNER: 3,

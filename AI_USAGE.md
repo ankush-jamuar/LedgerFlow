@@ -162,3 +162,27 @@ The assistant replaced interactive transaction usage in the non-financial user s
 - trigger lazy synchronization from authenticated dashboard requests
 
 Webhook support remains intact for production, but protected app routes no longer depend on ngrok or webhook delivery during development.
+
+---
+
+## Phases 4-7 AI Usage
+
+### Planning
+The assistant read the current README, scope document, ADRs, AI usage notes, Prisma schema, validation utilities, permissions helpers, and existing API route patterns before implementing the backend phases.
+
+### Implementation
+The assistant implemented backend-focused service modules for:
+- groups and membership timeline operations
+- expense CRUD and split validation
+- pure balance calculation and debt simplification
+- settlement creation, listing, history, and updates
+- shared activity logging and API error handling
+
+Business rules were kept in `src/lib/*` services rather than route handlers. API handlers authenticate, validate, delegate, and serialize responses.
+
+### Verification Notes
+The implementation was checked with TypeScript during development to catch route-handler and service typing issues. The final verification gate for this delivery is:
+- `npx prisma generate`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
