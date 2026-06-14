@@ -134,9 +134,9 @@ export async function calculateGroupBalances(
     totalSettledReceived: roundMoney(member.totalSettledReceived),
     netBalance: roundMoney(
       member.totalPaid -
-        member.totalOwed +
-        member.totalSettledPaid -
-        member.totalSettledReceived
+      member.totalOwed +
+      member.totalSettledPaid -
+      member.totalSettledReceived
     ),
   }));
 
