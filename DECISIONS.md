@@ -403,3 +403,19 @@ Group members must be discoverable and invited using their username or email add
 - Dramatically improved invitation flow.
 - Obfuscates raw Clerk IDs from frontend labels.
 - Preserves existing database relations by resolving matches locally before sending them to the membership endpoint.
+
+## ADR 18: Notification Architecture
+
+Status
+Approved
+
+Context
+LocalStorage-based notifications do not synchronize across devices and sessions.
+
+Decision
+Store notifications in PostgreSQL and expose notification APIs.
+
+Consequences
+- Persistent notifications
+- Cross-device consistency
+- Auditability
