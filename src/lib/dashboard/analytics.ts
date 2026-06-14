@@ -150,13 +150,19 @@ export async function getExpenseAnalytics(
 
   const totalExpenseAmount = roundMoney(
     expenses.reduce(
-      (total, expense) => total + decimalToNumber(expense.baseAmount),
+      (total: number, expense: typeof expenses[number]) =>
+        total + decimalToNumber(expense.baseAmount),
       0
     )
   );
+
   const sortedByAmount = [...expenses].sort(
-    (left, right) =>
-      decimalToNumber(right.baseAmount) - decimalToNumber(left.baseAmount)
+    (
+      left: typeof expenses[number],
+      right: typeof expenses[number]
+    ) =>
+      decimalToNumber(right.baseAmount) -
+      decimalToNumber(left.baseAmount)
   );
 
   return {
