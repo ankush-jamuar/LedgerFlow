@@ -74,7 +74,10 @@ export async function calculateGroupBalances(
     const allocations = calculateSplitAllocations(
       expense.splitType,
       baseAmount,
-      expense.participants.map((participant) => ({
+      expense.participants.map((participant: {
+        userId: string;
+        splitValue: { toString(): string } | null;
+      }) => ({
         userId: participant.userId,
         splitValue:
           participant.splitValue === null
