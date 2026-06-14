@@ -2,6 +2,7 @@ import { ExpenseStatus, GroupRole, Prisma, SplitType } from "@prisma/client";
 import { ACTIVITY_ACTIONS, createActivityLog } from "@/lib/activity";
 import { badRequest, notFound } from "@/lib/api/http";
 import { prisma } from "@/lib/db/prisma";
+import { createDbNotification } from "@/lib/notifications/service";
 import { assertGroupIsOpen } from "@/lib/groups/service";
 import {
   isMemberActiveOnDate,
@@ -127,6 +128,25 @@ export async function createExpense(actorId: string, input: CreateExpenseInput) 
     entityId: expense.id,
     metadata: { description: expense.description, baseAmount },
   });
+
+  const payerName = expense.paidBy?.username || expense.paidBy?.email?.split("@")[0] || "Someone";
+  const otherMembers = await prisma.groupMember.findMany({
+    where: {
+      groupId: input.groupId,
+      isActive: true,
+      userId: { not: input.paidById },
+    },
+  });
+
+  const groupName = expense.group?.name || "Group";
+  for (const member of otherMembers) {
+    await createDbNotification({
+      userId: member.userId,
+      type: "EXPENSE_CREATED",
+      title: "New Expense Added",
+      message: `${payerName} added "${expense.description}" of ${expense.originalCurrency} ${expense.originalAmount} in "${groupName}".`,
+    });
+  }
 
   return expense;
 }

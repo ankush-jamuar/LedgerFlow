@@ -82,6 +82,7 @@ model User {
   uploadedImports       ImportSession[]      @relation("UploadedImports")
   activityLogs          ActivityLog[]        @relation("ActorActivityLogs")
   sentMessages          Message[]            @relation("SentMessages")
+  notifications         Notification[]       @relation("UserNotifications")
 }
 
 model UserPreference {
@@ -292,3 +293,19 @@ model Message {
   @@index([groupId])
   @@index([senderId])
 }
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+

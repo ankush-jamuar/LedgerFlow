@@ -4,6 +4,32 @@ export interface ImportUploadInput {
   groupId: string;
   filename: string;
   csv: string;
+  mapping?: ImportColumnMapping;
+}
+
+export type ImportCanonicalField =
+  | "date"
+  | "description"
+  | "amount"
+  | "paidBy"
+  | "participants"
+  | "splitType"
+  | "currency";
+
+export type ImportColumnMapping = Partial<Record<ImportCanonicalField, string>>;
+
+export interface DetectedImportColumn {
+  name: string;
+  sampleValues: string[];
+}
+
+export interface ImportHeaderDetection {
+  filename: string;
+  detectedColumns: DetectedImportColumn[];
+  rowCount: number;
+  suggestedMapping: ImportColumnMapping;
+  requiredFields: ImportCanonicalField[];
+  optionalFields: ImportCanonicalField[];
 }
 
 export interface ParsedImportRow {
@@ -12,7 +38,7 @@ export interface ParsedImportRow {
   date: string;
   description: string;
   amount: string;
-  currency: string;
+  currency?: string;
   paidBy: string;
   participants: string;
   splitType: string;

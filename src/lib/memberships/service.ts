@@ -4,6 +4,7 @@ import { conflict, forbidden, notFound } from "@/lib/api/http";
 import { prisma } from "@/lib/db/prisma";
 import { assertGroupIsOpen } from "@/lib/groups/service";
 import { requireGroupRole } from "@/lib/memberships/rules";
+import { createDbNotification } from "@/lib/notifications/service";
 import type {
   AddMemberInput,
   ChangeRoleInput,
@@ -86,6 +87,15 @@ export async function addMember(
     metadata: { userId: input.userId, role: input.role },
   });
 
+  const group = await prisma.group.findUnique({ where: { id: groupId } });
+  const groupName = group?.name || "Group";
+  await createDbNotification({
+    userId: input.userId,
+    type: "GROUP_MEMBER_ADDED",
+    title: "Added to Group",
+    message: `You have been added to the group "${groupName}" as ${input.role}.`,
+  });
+
   return member;
 }
 
@@ -131,6 +141,15 @@ export async function removeMember(
     entityType: "GroupMember",
     entityId: member.id,
     metadata: { userId },
+  });
+
+  const group = await prisma.group.findUnique({ where: { id: groupId } });
+  const groupName = group?.name || "Group";
+  await createDbNotification({
+    userId,
+    type: "GROUP_MEMBER_REMOVED",
+    title: "Removed from Group",
+    message: `You have been removed from the group "${groupName}".`,
   });
 
   return removed;

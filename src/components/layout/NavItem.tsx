@@ -31,7 +31,7 @@ export function NavItem({ item, collapsed = false }: NavItemProps) {
         "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
         isActive
           ? "bg-[var(--color-primary-ghost)] text-[var(--color-primary-light)]"
-          : "text-[var(--color-text-secondary)] hover:bg-white/5 hover:text-[var(--color-text-primary)]",
+          : "text-[var(--color-text-secondary)] hover:bg-[var(--color-brand-hover)] hover:text-[var(--color-text-primary)]",
         collapsed && "justify-center px-2"
       )}
     >

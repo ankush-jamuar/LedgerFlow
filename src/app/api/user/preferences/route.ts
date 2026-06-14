@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { ensureCurrentLocalUser } from "@/lib/users/current-user";
+import { getCurrentLocalUser } from "@/lib/users/current-user";
 import { userPreferenceUpdateSchema } from "@/validations/user-preferences";
 
 export async function GET() {
-  const account = await ensureCurrentLocalUser();
+  const account = await getCurrentLocalUser();
 
   if (!account) {
     return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
@@ -14,7 +14,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const account = await ensureCurrentLocalUser();
+  const account = await getCurrentLocalUser();
 
   if (!account) {
     return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });

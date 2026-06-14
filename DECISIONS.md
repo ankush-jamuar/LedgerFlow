@@ -380,3 +380,26 @@ Keep analytics computation in service modules rather than route handlers:
 - Routes remain thin and consistent with prior phases.
 - Shared helpers avoid metric drift across endpoints.
 - Reporting remains reconstructable from source rows and does not create persisted summary state.
+
+---
+
+## ADR 17: User Search and Member Invitation UX
+
+### Status
+Approved
+
+### Context
+Prior implementation of the group member addition workflow required inputting a raw Clerk User ID (e.g. `user_XXXXXXXXXXXX`). This presented poor user experience as standard users do not know and cannot query the internal Clerk IDs of other users.
+
+### Decision
+Group members must be discoverable and invited using their username or email address. Clerk IDs are internal implementation details and must never be exposed in user-facing workflows:
+- Implement a user search endpoint at `/api/users/search?q=<query>`.
+- Allow searching matching user records by email prefix or username prefix.
+- The endpoint must return user records with username, email, image, and id fields, without exposing internal auth credentials.
+- Update `AddMemberModal` to use a debounced search input, querying the endpoint and rendering interactive dropdown options with user avatars, usernames, and emails.
+- Selecting a matching user submits their synced user ID directly to the add-member backend endpoint.
+
+### Consequences
+- Dramatically improved invitation flow.
+- Obfuscates raw Clerk IDs from frontend labels.
+- Preserves existing database relations by resolving matches locally before sending them to the membership endpoint.

@@ -30,13 +30,16 @@ function normalizeActiveClerkUser(clerkUser: ActiveClerkUser): NormalizedClerkUs
 }
 
 export async function ensureCurrentLocalUser(): Promise<LocalUserAccount | null> {
-  const clerkUser = await currentUser();
-
-  if (!clerkUser) {
+  try {
+    return await getCurrentLocalUser();
+  } catch (error) {
+    const err = error as Error & { digest?: string };
+    if (err && (err.message?.includes("Dynamic server usage") || err.digest === "DYNAMIC_SERVER_USAGE")) {
+      throw error;
+    }
+    console.error("[CURRENT_USER] Error in ensureCurrentLocalUser:", error);
     return null;
   }
-
-  return syncClerkUser(normalizeActiveClerkUser(clerkUser));
 }
 
 export async function getCurrentLocalUser(): Promise<LocalUserAccount | null> {
@@ -52,7 +55,8 @@ export async function getCurrentLocalUser(): Promise<LocalUserAccount | null> {
   });
 
   if (!localUser || !localUser.preferences) {
-    return syncClerkUser(normalizeActiveClerkUser(clerkUser));
+    const synced = await syncClerkUser(normalizeActiveClerkUser(clerkUser));
+    return synced;
   }
 
   return {

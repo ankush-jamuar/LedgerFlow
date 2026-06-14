@@ -152,6 +152,14 @@ async function upsertUser(user: NormalizedClerkUser) {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      // Under concurrent race, check if the user was just created by another request
+      const existingUser = await prisma.user.findUnique({
+        where: { id: user.id },
+      });
+      if (existingUser) {
+        return existingUser;
+      }
+
       console.warn(
         `Username collision while syncing Clerk user ${user.id}; retrying without username.`
       );
@@ -181,16 +189,31 @@ async function upsertUser(user: NormalizedClerkUser) {
 export async function syncClerkUser(user: NormalizedClerkUser) {
   const syncedUser = await upsertUser(user);
 
-  const preferences = await prisma.userPreference.upsert({
-    where: { userId: user.id },
-    update: {},
-    create: {
-      userId: user.id,
-      ...DEFAULT_USER_PREFERENCES,
-    },
-  });
+  try {
+    const preferences = await prisma.userPreference.upsert({
+      where: { userId: user.id },
+      update: {},
+      create: {
+        userId: user.id,
+        ...DEFAULT_USER_PREFERENCES,
+      },
+    });
 
-  return { user: syncedUser, preferences };
+    return { user: syncedUser, preferences };
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const preferences = await prisma.userPreference.findUnique({
+        where: { userId: user.id },
+      });
+      if (preferences) {
+        return { user: syncedUser, preferences };
+      }
+    }
+    throw error;
+  }
 }
 
 export function getClerkDeletedUserId(payload: unknown): string | null {

@@ -9,8 +9,9 @@
  *   Background: #050816  (deep space dark)
  *   Primary:    #7C3AED  (violet)
  *   Secondary:  #06B6D4  (cyan)
- *   Success:    #22C55E  (green)
+ *   Success:    #10B981  (emerald)
  *   Danger:     #EF4444  (red)
+ *   Warning:    #F59E0B  (amber)
  */
 
 @import "tailwindcss";
@@ -22,46 +23,135 @@
   /* === Brand Colors === */
   --color-brand-bg:        #050816;
   --color-brand-surface:   #0d1117;
+  --color-brand-surface-2: #111827;
   --color-brand-border:    rgba(255, 255, 255, 0.08);
+  --color-brand-border-2:  rgba(255, 255, 255, 0.05);
 
   --color-primary:         #7C3AED;
   --color-primary-light:   #8B5CF6;
   --color-primary-dark:    #6D28D9;
   --color-primary-ghost:   rgba(124, 58, 237, 0.12);
+  --color-primary-glow:    rgba(124, 58, 237, 0.25);
 
   --color-secondary:       #06B6D4;
   --color-secondary-light: #22D3EE;
   --color-secondary-dark:  #0891B2;
   --color-secondary-ghost: rgba(6, 182, 212, 0.12);
 
-  --color-success:         #22C55E;
-  --color-success-ghost:   rgba(34, 197, 94, 0.12);
+  /* === Financial Semantics === */
+  --color-success:         #10B981;
+  --color-success-light:   #34D399;
+  --color-success-ghost:   rgba(16, 185, 129, 0.12);
 
   --color-danger:          #EF4444;
+  --color-danger-light:    #F87171;
   --color-danger-ghost:    rgba(239, 68, 68, 0.12);
 
   --color-warning:         #F59E0B;
+  --color-warning-light:   #FCD34D;
   --color-warning-ghost:   rgba(245, 158, 11, 0.12);
+
+  --color-info:            #3B82F6;
+  --color-info-light:      #60A5FA;
+  --color-info-ghost:      rgba(59, 130, 246, 0.12);
 
   /* === Text === */
   --color-text-primary:    #F1F5F9;
   --color-text-secondary:  #94A3B8;
   --color-text-muted:      #475569;
+  --color-text-disabled:   #334155;
 
   /* === Glassmorphism === */
-  --glass-bg:              rgba(255, 255, 255, 0.04);
+  --glass-bg:              rgba(255, 255, 255, 0.035);
+  --glass-bg-hover:        rgba(255, 255, 255, 0.055);
   --glass-border:          rgba(255, 255, 255, 0.08);
-  --glass-blur:            12px;
+  --glass-border-hover:    rgba(255, 255, 255, 0.14);
+  --glass-blur:            16px;
+  --glass-blur-heavy:      24px;
 
   /* === Sidebar === */
-  --sidebar-width:         16rem;
+  --sidebar-width:         15rem;
   --sidebar-collapsed:     4rem;
+  --sidebar-transition:    280ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* === Z-Index System === */
+  --z-base:          0;
+  --z-raised:        10;
+  --z-dropdown:      100;
+  --z-sticky:        200;
+  --z-overlay:       300;
+  --z-modal:         400;
+  --z-toast:         500;
+  --z-command:       600;
+  --z-splash:        9999;
 
   /* === Spacing === */
+  --radius-xs: 0.25rem;
   --radius-sm: 0.375rem;
   --radius:    0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* === Animation === */
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in:       cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:      cubic-bezier(0, 0, 0.2, 1);
+
+  --duration-fast:   120ms;
+  --duration-base:   200ms;
+  --duration-slow:   300ms;
+  --duration-slower: 500ms;
+
+  --grid-line-color:       rgba(255, 255, 255, 0.028);
+  --gradient-mesh-1:       rgba(124, 58, 237, 0.06);
+  --gradient-mesh-2:       rgba(6, 182, 212, 0.04);
+  --gradient-mesh-3:       rgba(16, 185, 129, 0.03);
+
+  --color-brand-hover:     rgba(255, 255, 255, 0.05);
+  --color-topbar-bg:       rgba(5, 8, 22, 0.85);
+}
+
+/* ===== Theme Overrides ===== */
+html.light,
+.light {
+  --color-brand-bg:        #f8fafc;
+  --color-brand-surface:   #ffffff;
+  --color-brand-surface-2: #f1f5f9;
+  --color-brand-border:    rgba(15, 23, 42, 0.08);
+  --color-brand-border-2:  rgba(15, 23, 42, 0.05);
+
+  --color-brand-hover:     rgba(15, 23, 42, 0.05);
+  --color-topbar-bg:       rgba(248, 250, 252, 0.85);
+
+  --color-primary-ghost:   rgba(124, 58, 237, 0.08);
+  --color-primary-glow:    rgba(124, 58, 237, 0.15);
+
+  --color-secondary:       #0891B2;
+  --color-secondary-light: #06B6D4;
+  --color-secondary-dark:  #0e7490;
+  --color-secondary-ghost: rgba(8, 145, 178, 0.08);
+
+  --color-success-ghost:   rgba(16, 185, 129, 0.08);
+  --color-danger-ghost:    rgba(239, 68, 68, 0.08);
+  --color-warning-ghost:   rgba(245, 158, 11, 0.08);
+  --color-info-ghost:      rgba(59, 130, 246, 0.08);
+
+  --color-text-primary:    #0F172A;
+  --color-text-secondary:  #475569;
+  --color-text-muted:      #64748B;
+  --color-text-disabled:   #94A3B8;
+
+  --glass-bg:              rgba(255, 255, 255, 0.7);
+  --glass-bg-hover:        rgba(255, 255, 255, 0.85);
+  --glass-border:          rgba(15, 23, 42, 0.08);
+  --glass-border-hover:    rgba(15, 23, 42, 0.15);
+
+  --grid-line-color:       rgba(15, 23, 42, 0.015);
+  --gradient-mesh-1:       rgba(124, 58, 237, 0.03);
+  --gradient-mesh-2:       rgba(6, 182, 212, 0.02);
+  --gradient-mesh-3:       rgba(16, 185, 129, 0.015);
 }
 
 /* ===== Base Reset ===== */
@@ -89,18 +179,18 @@ body {
 
 /* ===== Scrollbar ===== */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 /* ===== Selection ===== */
@@ -113,14 +203,27 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
-/* ===== Glassmorphism Utility ===== */
+/* ===== Glassmorphism Utilities ===== */
 .glass {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+.glass-heavy {
+  background: rgba(13, 17, 23, 0.85);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+}
+
+.glass-subtle {
+  background: var(--glass-bg);
+  border: 1px solid var(--color-brand-border-2);
 }
 
 /* ===== Gradient Utilities ===== */
@@ -135,11 +238,75 @@ body {
   background-clip: text;
 }
 
+.gradient-mesh {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 0%, var(--gradient-mesh-1) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, var(--gradient-mesh-2) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 50% 100%, var(--gradient-mesh-3) 0%, transparent 60%);
+  pointer-events: none;
+}
+
 /* ===== Glow Utilities ===== */
 .glow-primary {
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.3), 0 0 60px rgba(124, 58, 237, 0.1);
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.25), 0 0 60px rgba(124, 58, 237, 0.08);
 }
 
 .glow-secondary {
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 0 60px rgba(6, 182, 212, 0.1);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.25), 0 0 60px rgba(6, 182, 212, 0.08);
+}
+
+.glow-success {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+/* ===== Skeleton Shimmer ===== */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius);
+}
+
+/* ===== Progress Bar ===== */
+@keyframes progress-indeterminate {
+  0%   { transform: translateX(-100%) scaleX(0.5); }
+  50%  { transform: translateX(0%) scaleX(1); }
+  100% { transform: translateX(100%) scaleX(0.5); }
+}
+
+/* ===== Grid Background ===== */
+.grid-bg {
+  background-image:
+    linear-gradient(var(--grid-line-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+/* ===== Sidebar Transition ===== */
+.sidebar-transition {
+  transition: width var(--sidebar-transition);
+  will-change: width;
+}
+
+/* ===== Page Transition === */
+.page-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--duration-slow) var(--ease-smooth),
+              transform var(--duration-slow) var(--ease-smooth);
 }

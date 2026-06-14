@@ -6,6 +6,7 @@ import {
 import { ACTIVITY_ACTIONS } from "@/lib/activity";
 import { badRequest, notFound } from "@/lib/api/http";
 import { prisma } from "@/lib/db/prisma";
+import { createDbNotification } from "@/lib/notifications/service";
 import { calculateSplitAllocations } from "@/lib/expenses/splits";
 import { assertGroupIsOpen } from "@/lib/groups/service";
 import { requireGroupRole } from "@/lib/memberships/rules";
@@ -219,6 +220,23 @@ export async function createImportSession(
 
       return updated;
     });
+
+    // Notify the uploader
+    await createDbNotification({
+      userId: actorId,
+      type: "IMPORT_COMPLETED",
+      title: "Import Completed",
+      message: `CSV Import "${session.filename}" finished with status ${completed.status}. Rows imported: ${completed.processedCount - completed.errorCount}, rejected: ${completed.errorCount}.`,
+    });
+
+    if (validation.anomalies.length > 0) {
+      await createDbNotification({
+        userId: actorId,
+        type: "ANOMALY_DETECTED",
+        title: "Anomaly Warnings Detected",
+        message: `${validation.anomalies.length} anomaly warnings were flagged during CSV import "${session.filename}".`,
+      });
+    }
 
     return completed;
   } catch (error) {

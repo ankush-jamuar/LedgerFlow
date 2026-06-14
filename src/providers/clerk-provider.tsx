@@ -3,9 +3,13 @@
 /**
  * src/providers/clerk-provider.tsx — Clerk Authentication Provider
  *
- * Wraps the application in ClerkProvider and configures redirect URLs
- * from environment variables. This is a thin wrapper to keep the root
- * layout clean and allow provider configuration to be co-located.
+ * Wraps the application in ClerkProvider and configures:
+ *  - Redirect URLs (force + fallback to /dashboard)
+ *  - Sign-in/sign-up page URLs
+ *  - Theme appearance matching LedgerFlow brand
+ *
+ * Redirect config is set BOTH here and in .env for reliability.
+ * Clerk v7 priority: component props > env vars > defaults.
  */
 
 import { ClerkProvider } from "@clerk/nextjs";
@@ -17,6 +21,12 @@ interface ClerkAuthProviderProps {
 export function ClerkAuthProvider({ children }: ClerkAuthProviderProps) {
   return (
     <ClerkProvider
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      signInForceRedirectUrl="/dashboard"
+      signUpForceRedirectUrl="/dashboard"
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
       appearance={{
         variables: {
           colorPrimary: "#7C3AED",

@@ -2,6 +2,7 @@ import { GroupRole, Prisma } from "@prisma/client";
 import { ACTIVITY_ACTIONS, createActivityLog } from "@/lib/activity";
 import { badRequest, notFound } from "@/lib/api/http";
 import { prisma } from "@/lib/db/prisma";
+import { createDbNotification } from "@/lib/notifications/service";
 import { assertGroupIsOpen } from "@/lib/groups/service";
 import { requireActiveMembership, requireGroupRole } from "@/lib/memberships/rules";
 import type {
@@ -92,6 +93,15 @@ export async function createSettlement(
       receiverId: input.receiverId,
       baseAmount,
     },
+  });
+
+  const payerName = settlement.payer?.username || settlement.payer?.email?.split("@")[0] || "Someone";
+  const groupName = settlement.group?.name || "Group";
+  await createDbNotification({
+    userId: input.receiverId,
+    type: "SETTLEMENT_CREATED",
+    title: "Payment Received",
+    message: `${payerName} recorded a settlement to you of ${settlement.originalCurrency} ${settlement.originalAmount} in "${groupName}".`,
   });
 
   return settlement;

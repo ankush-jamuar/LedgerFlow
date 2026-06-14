@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ensureCurrentLocalUser } from "@/lib/users/current-user";
+import { getCurrentLocalUser } from "@/lib/users/current-user";
 
 export class ServiceError extends Error {
   constructor(
@@ -30,7 +30,7 @@ export function conflict(message: string): never {
 }
 
 export async function requireCurrentUserId(): Promise<string> {
-  const account = await ensureCurrentLocalUser();
+  const account = await getCurrentLocalUser();
 
   if (!account) {
     throw new ServiceError(401, "Unauthenticated", "UNAUTHENTICATED");

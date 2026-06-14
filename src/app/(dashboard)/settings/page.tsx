@@ -3,6 +3,7 @@ import { PageContainer } from "@/components/ui/PageContainer";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { PreferencesForm } from "@/components/settings/PreferencesForm";
+import { PageTransition } from "@/components/system/PageTransition";
 import { ensureCurrentLocalUser } from "@/lib/users/current-user";
 import {
   getUserContactLabel,
@@ -16,14 +17,16 @@ export default async function SettingsPage() {
 
   if (!account) {
     return (
-      <PageContainer>
-        <DashboardShell>
-          <SectionHeader
-            title="Settings"
-            subtitle="Sign in to manage your account preferences"
-          />
-        </DashboardShell>
-      </PageContainer>
+      <PageTransition>
+        <PageContainer>
+          <DashboardShell>
+            <SectionHeader
+              title="Settings"
+              subtitle="Sign in to manage your account preferences"
+            />
+          </DashboardShell>
+        </PageContainer>
+      </PageTransition>
     );
   }
 
@@ -31,6 +34,7 @@ export default async function SettingsPage() {
   const contactLabel = getUserContactLabel(account.user);
 
   return (
+    <PageTransition>
     <PageContainer>
       <DashboardShell>
         <SectionHeader
@@ -90,5 +94,6 @@ export default async function SettingsPage() {
         </div>
       </DashboardShell>
     </PageContainer>
+    </PageTransition>
   );
 }

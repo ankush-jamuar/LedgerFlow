@@ -45,8 +45,23 @@ export function isMemberActiveOnDate(
   membership: { joinedAt: Date; leftAt: Date | null },
   expenseDate: Date
 ): boolean {
-  return (
-    expenseDate >= membership.joinedAt &&
-    (membership.leftAt === null || expenseDate <= membership.leftAt)
-  );
+  const joinDate = new Date(membership.joinedAt);
+  joinDate.setHours(0, 0, 0, 0);
+
+  const expDate = new Date(expenseDate);
+  expDate.setHours(0, 0, 0, 0);
+
+  if (expDate < joinDate) {
+    return false;
+  }
+
+  if (membership.leftAt !== null) {
+    const leftDate = new Date(membership.leftAt);
+    leftDate.setHours(0, 0, 0, 0);
+    if (expDate > leftDate) {
+      return false;
+    }
+  }
+
+  return true;
 }
