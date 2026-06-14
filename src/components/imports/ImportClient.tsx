@@ -151,9 +151,10 @@ export function ImportClient() {
           const samples: Record<string, string[]> = {};
           headers.forEach((h) => {
             samples[h] = results.data
-              .map((row: Record<string, unknown>) =>
-                String(row[h] ?? "")
-              )
+              .map((row) => {
+                const record = row as Record<string, unknown>;
+                return String(record[h] ?? "");
+              })
               .filter(Boolean)
               .slice(0, 3);
           });

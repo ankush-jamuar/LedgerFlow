@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { Prisma } from "@prisma/client";
 
 export const ACTIVITY_ACTIONS = {
   GROUP_CREATED: "GROUP_CREATED",
@@ -39,7 +40,7 @@ export async function createActivityLog(input: ActivityInput) {
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId,
-      metadata: input.metadata ?? undefined,
+      metadata: input.metadata as Prisma.InputJsonValue | undefined,
     },
   });
 }
