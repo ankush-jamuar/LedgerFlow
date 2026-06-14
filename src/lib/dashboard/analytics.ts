@@ -99,8 +99,14 @@ export async function getGroupAnalytics(
   const largestGroup =
     groups.length === 0
       ? null
-      : groups.reduce((largest, group) =>
-        group._count.memberships > largest._count.memberships ? group : largest
+      : groups.reduce(
+        (
+          largest: typeof groups[number],
+          group: typeof groups[number]
+        ) =>
+          group._count.memberships > largest._count.memberships
+            ? group
+            : largest
       );
   const newestGroup = groups[0] ?? null;
 
