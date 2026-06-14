@@ -1,4 +1,3 @@
-import { ExpenseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import {
   calculateAccessibleOutstandingBalance,
@@ -27,10 +26,10 @@ export async function getDashboardOverview(
     }),
     prisma.expense.count({ where: { groupId: { in: groupIds } } }),
     prisma.expense.count({
-      where: { groupId: { in: groupIds }, status: ExpenseStatus.ACTIVE },
+      where: { groupId: { in: groupIds }, status: "ACTIVE" },
     }),
     prisma.expense.findMany({
-      where: { groupId: { in: groupIds }, status: ExpenseStatus.ACTIVE },
+      where: { groupId: { in: groupIds }, status: "ACTIVE" },
       select: {
         baseAmount: true,
         originalCurrency: true,
