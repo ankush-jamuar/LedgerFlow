@@ -179,10 +179,15 @@ export async function getExpenseAnalytics(
         ? expenseSummary(sortedByAmount[sortedByAmount.length - 1])
         : null,
     expensesThisMonth: expenses.filter(
-      (expense) => expense.date >= thisMonth.start && expense.date < thisMonth.next
+      (expense: typeof expenses[number]) =>
+        expense.date >= thisMonth.start &&
+        expense.date < thisMonth.next
     ).length,
+
     expensesLastMonth: expenses.filter(
-      (expense) => expense.date >= lastMonth.start && expense.date < lastMonth.next
+      (expense: typeof expenses[number]) =>
+        expense.date >= lastMonth.start &&
+        expense.date < lastMonth.next
     ).length,
   };
 }
