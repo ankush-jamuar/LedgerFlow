@@ -159,7 +159,10 @@ export async function calculateGroupBalances(
     ),
     totalSettled: roundMoney(
       group.settlements.reduce(
-        (total, settlement) => total + Number(settlement.baseAmount.toString()),
+        (
+          total: number,
+          settlement: { baseAmount: { toString(): string } }
+        ) => total + Number(settlement.baseAmount.toString()),
         0
       )
     ),
