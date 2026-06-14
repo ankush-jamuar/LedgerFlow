@@ -208,3 +208,29 @@ npm run build
 ## Future Enhancements
 - **Multi-currency Settlement Logic**: Live FX conversions for settle-ups.
 - **Audit Trails**: Pusher-powered real-time log feed displaying settlement histories.
+
+## Assignment Completion Status
+
+### Phase 12
+Dashboard UI
+
+### Phase 13
+Groups UI
+
+### Phase 14
+Membership Management
+
+### Phase 15
+Expenses Experience
+
+### Phase 16
+Settlements Experience
+
+### Phase 17
+Imports Experience
+
+### QA Fixes
+- Username/email member search
+- Same-day membership validation
+- Multipart CSV upload fix
+- Database-backed notifications
