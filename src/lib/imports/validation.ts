@@ -268,7 +268,9 @@ export async function validateImportRows(
   for (const row of rows) {
     const rowAnomalies: ImportAnomalyDraft[] = [];
     const amount = toMoney(row.amount);
-    const currency = toCurrency(row.currency);
+    const currency = row.currency
+      ? toCurrency(row.currency)
+      : undefined;
     const date = parseDate(row.date);
     const splitTypeResult = splitTypeSchema.safeParse(row.splitType.toUpperCase());
     const payer = resolveMember(row.paidBy, memberIndex);
@@ -467,10 +469,10 @@ export async function validateImportRows(
         payload: {
           conflictWith: existingConflictMatch
             ? {
-                expenseId: existingConflictMatch.id,
-                amount: existingConflictMatch.amount,
-                currency: existingConflictMatch.currency,
-              }
+              expenseId: existingConflictMatch.id,
+              amount: existingConflictMatch.amount,
+              currency: existingConflictMatch.currency,
+            }
             : batchConflictMatch,
           row: row.raw,
         },
