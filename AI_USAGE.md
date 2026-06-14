@@ -234,3 +234,39 @@ Phase 11 verification gate:
 - `npm run lint`
 - `npm run typecheck`
 - `npm run build`
+
+## Assignment QA Fixes
+
+### Member Invitation UX
+
+AI initially suggested exposing Clerk User IDs for member invitations.
+
+Issue:
+End users cannot discover internal Clerk IDs.
+
+Resolution:
+Implemented username/email search endpoint and debounced user picker.
+
+---
+
+### CSV Import Upload Failure
+
+AI-generated API client applied application/json headers to multipart uploads.
+
+Issue:
+Browser multipart boundaries were overwritten, causing upload failures.
+
+Resolution:
+Conditionally removed Content-Type when payload is FormData.
+
+---
+
+### Membership Date Validation
+
+AI-generated comparison used full timestamps.
+
+Issue:
+Users joining on the same day could not create expenses.
+
+Resolution:
+Normalized dates to calendar-day precision before validation.
