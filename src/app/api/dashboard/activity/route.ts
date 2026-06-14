@@ -13,8 +13,8 @@ export async function GET(req: Request) {
       limit: searchParams.get("limit") ?? undefined,
     });
     const activity = await getRecentDashboardActivity(actorId, query.limit);
-    
-    const activities = activity.map((log) => ({
+
+    const activities = activity.map((log: any) => ({
       id: log.id,
       action: log.action,
       actorId: log.actorId,

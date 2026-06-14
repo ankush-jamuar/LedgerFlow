@@ -50,7 +50,23 @@ export async function getMembershipTimeline(actorId: string, groupId: string) {
     orderBy: { createdAt: "asc" },
   });
 
-  const events: any[] = [];
+  type TimelineEvent = {
+    id: string;
+    type: string;
+    userId: string;
+    userName: string;
+    role: string;
+    date: string;
+    fromRole?: string;
+    user?: {
+      id: string;
+      username: string | null;
+      email: string | null;
+      imageUrl: string | null;
+    };
+  };
+
+  const events: TimelineEvent[] = [];
 
   for (const m of memberships) {
     const userName = m.user.username || m.user.email?.split("@")[0] || m.userId;
@@ -141,25 +157,25 @@ export async function addMember(
 
   const member = existing
     ? await prisma.groupMember.update({
-        where: { id: existing.id },
-        data: {
-          role: input.role,
-          joinedAt: new Date(),
-          leftAt: null,
-          isActive: true,
-          invitedById: actorId,
-        },
-        include: membershipInclude,
-      })
+      where: { id: existing.id },
+      data: {
+        role: input.role,
+        joinedAt: new Date(),
+        leftAt: null,
+        isActive: true,
+        invitedById: actorId,
+      },
+      include: membershipInclude,
+    })
     : await prisma.groupMember.create({
-        data: {
-          groupId,
-          userId: input.userId,
-          role: input.role,
-          invitedById: actorId,
-        },
-        include: membershipInclude,
-      });
+      data: {
+        groupId,
+        userId: input.userId,
+        role: input.role,
+        invitedById: actorId,
+      },
+      include: membershipInclude,
+    });
 
   await createActivityLog({
     actorId,

@@ -1,4 +1,3 @@
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 
 export const ACTIVITY_ACTIONS = {
@@ -29,7 +28,7 @@ interface ActivityInput {
   action: ActivityAction;
   entityType: string;
   entityId: string;
-  metadata?: Prisma.InputJsonValue;
+  metadata?: Record<string, unknown>;
 }
 
 export async function createActivityLog(input: ActivityInput) {

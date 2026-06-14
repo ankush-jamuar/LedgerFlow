@@ -151,7 +151,9 @@ export function ImportClient() {
           const samples: Record<string, string[]> = {};
           headers.forEach((h) => {
             samples[h] = results.data
-              .map((row: any) => String(row[h] ?? ""))
+              .map((row: Record<string, unknown>) =>
+                String(row[h] ?? "")
+              )
               .filter(Boolean)
               .slice(0, 3);
           });
@@ -305,11 +307,10 @@ export function ImportClient() {
             onDragLeave={handleDrag}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`rounded-2xl border-2 border-dashed p-10 text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
-              dragActive
-                ? "border-[var(--color-primary-light)] bg-[var(--color-primary)]/5"
-                : "border-[var(--glass-border)] hover:border-white/20 bg-white/[0.01]"
-            }`}
+            className={`rounded-2xl border-2 border-dashed p-10 text-center transition-all cursor-pointer flex flex-col items-center justify-center ${dragActive
+              ? "border-[var(--color-primary-light)] bg-[var(--color-primary)]/5"
+              : "border-[var(--glass-border)] hover:border-white/20 bg-white/[0.01]"
+              }`}
           >
             <input
               type="file"
@@ -557,11 +558,10 @@ export function ImportClient() {
                     <div
                       key={session.id}
                       onClick={() => setInspectSessionId(session.id)}
-                      className={`glass rounded-xl p-4 cursor-pointer transition-all border text-left flex justify-between items-center gap-3 ${
-                        isInspected
-                          ? "border-[var(--color-primary-light)] bg-[var(--color-primary)]/5"
-                          : "border-[var(--glass-border)] hover:border-white/10"
-                      }`}
+                      className={`glass rounded-xl p-4 cursor-pointer transition-all border text-left flex justify-between items-center gap-3 ${isInspected
+                        ? "border-[var(--color-primary-light)] bg-[var(--color-primary)]/5"
+                        : "border-[var(--glass-border)] hover:border-white/10"
+                        }`}
                     >
                       <div className="min-w-0">
                         <h4 className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
@@ -583,10 +583,10 @@ export function ImportClient() {
                             session.status === "COMPLETED"
                               ? "success"
                               : session.status === "PARTIAL"
-                              ? "warning"
-                              : session.status === "FAILED"
-                              ? "danger"
-                              : "default"
+                                ? "warning"
+                                : session.status === "FAILED"
+                                  ? "danger"
+                                  : "default"
                           }
                           size="sm"
                         >
@@ -728,11 +728,10 @@ export function ImportClient() {
                           >
                             <div className="space-y-1">
                               <span className="font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                                <span className={`h-1.5 w-1.5 rounded-full ${
-                                  anomaly.severity === "CRITICAL" || anomaly.severity === "HIGH"
-                                    ? "bg-[var(--color-danger-light)]"
-                                    : "bg-[var(--color-warning-light)]"
-                                }`} />
+                                <span className={`h-1.5 w-1.5 rounded-full ${anomaly.severity === "CRITICAL" || anomaly.severity === "HIGH"
+                                  ? "bg-[var(--color-danger-light)]"
+                                  : "bg-[var(--color-warning-light)]"
+                                  }`} />
                                 {anomaly.type.replace(/_/g, " ")}
                               </span>
                               <p className="text-[var(--color-text-secondary)] leading-relaxed">
