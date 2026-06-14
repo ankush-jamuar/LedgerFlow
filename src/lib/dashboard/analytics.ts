@@ -204,7 +204,10 @@ export async function getSettlementAnalytics(
   });
   const totalSettlementAmount = roundMoney(
     settlements.reduce(
-      (total, settlement) => total + decimalToNumber(settlement.baseAmount),
+      (
+        total: number,
+        settlement: typeof settlements[number]
+      ) => total + decimalToNumber(settlement.baseAmount),
       0
     )
   );
@@ -217,12 +220,13 @@ export async function getSettlementAnalytics(
         ? 0
         : roundMoney(totalSettlementAmount / settlements.length),
     settlementsThisMonth: settlements.filter(
-      (settlement) =>
+      (settlement: typeof settlements[number]) =>
         settlement.settledAt >= thisMonth.start &&
         settlement.settledAt < thisMonth.next
     ).length,
+
     settlementsLastMonth: settlements.filter(
-      (settlement) =>
+      (settlement: typeof settlements[number]) =>
         settlement.settledAt >= lastMonth.start &&
         settlement.settledAt < lastMonth.next
     ).length,
