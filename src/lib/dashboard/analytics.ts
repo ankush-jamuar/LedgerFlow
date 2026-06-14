@@ -112,7 +112,9 @@ export async function getGroupAnalytics(
 
   return {
     totalGroups: groups.length,
-    activeGroups: groups.filter((group) => !group.isArchived).length,
+    activeGroups: groups.filter(
+      (group: typeof groups[number]) => !group.isArchived
+    ).length,
     averageMembersPerGroup:
       groups.length === 0 ? 0 : roundMoney(totalMembers / groups.length),
     largestGroup: largestGroup
@@ -129,7 +131,9 @@ export async function getGroupAnalytics(
         createdAt: newestGroup.createdAt.toISOString(),
       }
       : null,
-    archivedGroups: groups.filter((group) => group.isArchived).length,
+    archivedGroups: groups.filter(
+      (group: typeof groups[number]) => group.isArchived
+    ).length,
   };
 }
 
