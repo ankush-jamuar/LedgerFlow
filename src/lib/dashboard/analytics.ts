@@ -92,7 +92,8 @@ export async function getGroupAnalytics(
   });
 
   const totalMembers = groups.reduce(
-    (total, group) => total + group._count.memberships,
+    (total: number, group: any) =>
+      total + group._count.memberships,
     0
   );
   const largestGroup =
