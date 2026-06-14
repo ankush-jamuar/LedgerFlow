@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { useGroupMembers } from "@/lib/hooks/use-groups";
 import { useUpdateExpense } from "@/lib/hooks/use-expenses";
 import type { ExpenseResponse } from "@/lib/api/client";
+import { useToast } from "@/components/ui/Toast";
 
 interface EditExpenseModalProps {
   expense: ExpenseResponse;
@@ -36,6 +37,7 @@ export function EditExpenseModal({
   onClose,
   onSuccess,
 }: EditExpenseModalProps) {
+  const toast = useToast();
   const { data: membersData, isLoading: isMembersLoading } = useGroupMembers(expense.groupId);
   const members = useMemo(() => membersData?.members ?? [], [membersData?.members]);
 
@@ -192,6 +194,7 @@ export function EditExpenseModal({
         participants: participantsPayload,
         receiptUrl: receiptUrl.trim() || null,
       });
+      toast.success("Expense updated successfully!");
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
@@ -233,10 +236,10 @@ export function EditExpenseModal({
                 />
               </div>
               <Input
-                label="Currency"
+                label="Group Currency"
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                maxLength={3}
+                disabled
+                readOnly
                 id="edit-expense-currency"
               />
             </div>

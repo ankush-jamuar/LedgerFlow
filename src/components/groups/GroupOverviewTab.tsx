@@ -70,7 +70,9 @@ export function GroupOverviewTab({ groupId }: GroupOverviewTabProps) {
       </div>
 
       {/* Balance Explorer */}
-      <GroupBalanceExplorer groupId={groupId} />
+      <div id="balance-overview">
+        <GroupBalanceExplorer groupId={groupId} />
+      </div>
 
       {/* Membership Timeline */}
       <MembershipTimeline groupId={groupId} />

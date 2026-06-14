@@ -14,6 +14,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { useAddGroupMember } from "@/lib/hooks/use-groups";
 import { X, Search } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface AddMemberModalProps {
   groupId: string;
@@ -36,6 +37,7 @@ const ROLE_OPTIONS = [
 
 export function AddMemberModal({ groupId, open, onClose }: AddMemberModalProps) {
   const addMember = useAddGroupMember(groupId);
+  const toast = useToast();
   const [role, setRole] = useState("MEMBER");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -84,6 +86,7 @@ export function AddMemberModal({ groupId, open, onClose }: AddMemberModalProps) 
         role,
       });
 
+      toast.success(`${selectedUser.username || selectedUser.email} added to group successfully!`);
       // Reset & close
       setSelectedUser(null);
       setSearchQuery("");

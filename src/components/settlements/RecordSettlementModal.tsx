@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { useGroups, useGroupMembers, GROUP_QUERY_KEYS } from "@/lib/hooks/use-groups";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
+import { useToast } from "@/components/ui/Toast";
 
 interface RecordSettlementModalProps {
   groupId?: string; // Optional: Lock to a specific group
@@ -31,6 +32,7 @@ export function RecordSettlementModal({
   onSuccess,
 }: RecordSettlementModalProps) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const { data: groupsData } = useGroups();
   const groups = useMemo(() => groupsData?.groups ?? [], [groupsData?.groups]);
 
@@ -63,9 +65,9 @@ export function RecordSettlementModal({
     setPrevSelectedGroupId(selectedGroupId);
   }
 
-  // Set default payer/receiver when members load
-  const [prevMembers, setPrevMembers] = useState(members);
-  if (members !== prevMembers) {
+  // Set default payer/receiver when selectedGroupId changes, but only once when members load
+  const [prevGroupIdForMembers, setPrevGroupIdForMembers] = useState("");
+  if (selectedGroupId !== prevGroupIdForMembers && !isMembersLoading && members.length > 0) {
     if (members.length > 1) {
       setPayerId(members[0].userId);
       setReceiverId(members[1].userId);
@@ -76,7 +78,7 @@ export function RecordSettlementModal({
       setPayerId("");
       setReceiverId("");
     }
-    setPrevMembers(members);
+    setPrevGroupIdForMembers(selectedGroupId);
   }
 
   const activeGroupOptions = useMemo(() => {
@@ -94,9 +96,12 @@ export function RecordSettlementModal({
   const recordSettlementMutation = useMutation({
     mutationFn: (data: unknown) => api.groups.createSettlement(selectedGroupId, data),
     onSuccess: () => {
+      toast.success("Settlement recorded successfully!");
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.settlements(selectedGroupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.balances(selectedGroupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(selectedGroupId) });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       if (onSuccess) onSuccess();
       handleClose();
     },
@@ -210,10 +215,10 @@ export function RecordSettlementModal({
             />
           </div>
           <Input
-            label="Currency"
+            label="Group Currency"
             value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            maxLength={3}
+            disabled
+            readOnly
             id="settlement-currency"
           />
         </div>

@@ -85,6 +85,8 @@ export function useCreateGroup() {
     mutationFn: api.groups.create,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -97,6 +99,8 @@ export function useUpdateGroup(groupId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.detail(groupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -107,6 +111,8 @@ export function useArchiveGroup() {
     mutationFn: (groupId: string) => api.groups.archive(groupId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -121,6 +127,8 @@ export function useAddGroupMember(groupId: string) {
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(groupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.balances(groupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.detail(groupId) });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -133,6 +141,9 @@ export function useChangeGroupMemberRole(groupId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.members(groupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(groupId) });
+      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.detail(groupId) });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -147,6 +158,8 @@ export function useRemoveGroupMember(groupId: string) {
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(groupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.balances(groupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.detail(groupId) });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }

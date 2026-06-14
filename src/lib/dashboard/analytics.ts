@@ -62,11 +62,15 @@ export async function calculateAccessibleOutstandingBalance(
   let outstanding = 0;
 
   for (const groupId of groupIds) {
-    const balances = await calculateGroupBalances(actorId, groupId);
-    outstanding += balances.whoOwesWhom.reduce(
-      (total, settlement) => total + settlement.amount,
-      0
-    );
+    try {
+      const balances = await calculateGroupBalances(actorId, groupId);
+      const member = balances.members.find((m) => m.userId === actorId);
+      if (member) {
+        outstanding += member.netBalance;
+      }
+    } catch (error) {
+      console.error(`Failed to calculate balance for group ${groupId}`, error);
+    }
   }
 
   return roundMoney(outstanding);

@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { useCreateGroup } from "@/lib/hooks/use-groups";
 import { useUserPreferences } from "@/lib/hooks/use-preferences";
+import { useToast } from "@/components/ui/Toast";
 
 interface CreateGroupModalProps {
   open: boolean;
@@ -38,6 +39,7 @@ export function CreateGroupModal({ open, onClose }: CreateGroupModalProps) {
   const router = useRouter();
   const createGroup = useCreateGroup();
   const { data: prefData } = useUserPreferences();
+  const toast = useToast();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -73,6 +75,7 @@ export function CreateGroupModal({ open, onClose }: CreateGroupModalProps) {
         currency,
       });
 
+      toast.success("Group created successfully!");
       // Reset form
       setName("");
       setDescription("");

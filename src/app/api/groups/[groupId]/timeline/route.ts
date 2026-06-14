@@ -11,7 +11,7 @@ export async function GET(_req: Request, context: RouteContext) {
     const actorId = await requireCurrentUserId();
     const { groupId } = await context.params;
     const timeline = await getMembershipTimeline(actorId, groupId);
-    return NextResponse.json({ timeline });
+    return NextResponse.json({ timelineEvents: timeline });
   } catch (error) {
     return handleServiceError(error);
   }

@@ -55,20 +55,24 @@ export function FinancialChart({
     return <SkeletonCard />;
   }
 
-  if (chartData.length === 0) {
+  if (chartData.length < 2) {
     return (
-      <div className="glass rounded-xl p-5 h-[320px]">
-        <div className="flex items-center gap-2 border-b border-[var(--glass-border)] pb-3 mb-4">
+      <div className="glass rounded-xl p-5 h-[190px] flex flex-col justify-between">
+        <div className="flex items-center gap-2 border-b border-[var(--glass-border)] pb-2 flex-shrink-0">
           <LineChart className="h-4.5 w-4.5 text-[var(--color-primary-light)]" />
           <h3 className="font-semibold text-sm text-[var(--color-text-primary)]">
             Financial Trends
           </h3>
         </div>
-        <EmptyState
-          icon={LineChart}
-          title="No transaction history"
-          description="Record expenses or settlements in your groups to populate trend charts."
-        />
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-2">
+          <LineChart className="h-6 w-6 text-[var(--color-text-muted)] opacity-40 mb-1.5" />
+          <h4 className="text-xs font-semibold text-[var(--color-text-secondary)]">
+            Not enough transaction history
+          </h4>
+          <p className="text-[10px] text-[var(--color-text-muted)] max-w-xs mt-0.5 leading-relaxed">
+            Record at least 2 months of expenses or settlements in your groups to populate trend charts.
+          </p>
+        </div>
       </div>
     );
   }

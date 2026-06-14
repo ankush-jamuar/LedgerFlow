@@ -30,6 +30,8 @@ export function useUpdateExpense(expenseId: string, groupId: string) {
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.expenses(groupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.balances(groupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(groupId) });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -42,6 +44,8 @@ export function useDeleteExpense(expenseId: string, groupId: string) {
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.expenses(groupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.balances(groupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(groupId) });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }

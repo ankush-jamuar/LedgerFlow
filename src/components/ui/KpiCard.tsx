@@ -71,14 +71,23 @@ export function KpiCard({
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)] truncate">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
             {label}
           </p>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-[var(--color-text-primary)] truncate">
+          <p className="mt-2 text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">
             {value}
           </p>
           {subValue && (
-            <p className="mt-0.5 text-xs text-[var(--color-text-muted)] truncate">
+            <p className={cn(
+              "mt-0.5 text-xs",
+              label === "Net Outstanding"
+                ? trend === "up"
+                  ? "text-[var(--color-success-light)] font-semibold"
+                  : trend === "down"
+                  ? "text-[var(--color-danger-light)] font-semibold"
+                  : "text-[var(--color-text-muted)]"
+                : "text-[var(--color-text-muted)]"
+            )}>
               {subValue}
             </p>
           )}

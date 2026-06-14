@@ -76,7 +76,7 @@ export async function getExpense(actorId: string, expenseId: string) {
 }
 
 export async function createExpense(actorId: string, input: CreateExpenseInput) {
-  await assertGroupIsOpen(input.groupId);
+  const group = await assertGroupIsOpen(input.groupId);
   await requireGroupRole(input.groupId, actorId, GroupRole.MEMBER);
   await validateExpenseMemberships(
     input.groupId,
@@ -85,7 +85,8 @@ export async function createExpense(actorId: string, input: CreateExpenseInput) 
     input.participants
   );
 
-  const baseAmount = calculateBaseAmount(input.originalAmount, input.exchangeRate);
+  const currency = group.currency;
+  const baseAmount = input.originalAmount;
   const allocations = calculateSplitAllocations(
     input.splitType,
     baseAmount,
@@ -101,8 +102,8 @@ export async function createExpense(actorId: string, input: CreateExpenseInput) 
       date: input.date,
       receiptUrl: input.receiptUrl ?? null,
       originalAmount: toDecimal(input.originalAmount),
-      originalCurrency: input.originalCurrency,
-      exchangeRate: new Prisma.Decimal(input.exchangeRate.toFixed(6)),
+      originalCurrency: currency,
+      exchangeRate: new Prisma.Decimal("1.000000"),
       baseAmount: toDecimal(baseAmount),
       participants: {
         create: allocations.map((allocation) => ({
@@ -157,14 +158,12 @@ export async function updateExpense(
   input: UpdateExpenseInput
 ) {
   const existing = await getExpense(actorId, expenseId);
-  await assertGroupIsOpen(existing.groupId);
+  const group = await assertGroupIsOpen(existing.groupId);
   await requireGroupRole(existing.groupId, actorId, GroupRole.ADMIN);
 
   const nextSplitType = input.splitType ?? existing.splitType;
   const nextAmount =
     input.originalAmount ?? Number(existing.originalAmount.toString());
-  const nextExchangeRate =
-    input.exchangeRate ?? Number(existing.exchangeRate.toString());
   const nextDate = input.date ?? existing.date;
   const nextPaidById = input.paidById ?? existing.paidById;
   const nextParticipants =
@@ -184,7 +183,7 @@ export async function updateExpense(
     nextParticipants
   );
 
-  const baseAmount = calculateBaseAmount(nextAmount, nextExchangeRate);
+  const baseAmount = nextAmount;
   const allocations = calculateSplitAllocations(
     nextSplitType,
     baseAmount,
@@ -203,8 +202,8 @@ export async function updateExpense(
         date: nextDate,
         receiptUrl: input.receiptUrl,
         originalAmount: toDecimal(nextAmount),
-        originalCurrency: input.originalCurrency ?? existing.originalCurrency,
-        exchangeRate: new Prisma.Decimal(nextExchangeRate.toFixed(6)),
+        originalCurrency: group.currency,
+        exchangeRate: new Prisma.Decimal("1.000000"),
         baseAmount: toDecimal(baseAmount),
         participants: {
           create: allocations.map((allocation) => ({
@@ -229,6 +228,26 @@ export async function updateExpense(
     entityId: expenseId,
     metadata: { baseAmount },
   });
+
+  // Notify other group members of update
+  const updaterName = updated.paidBy?.username || updated.paidBy?.email?.split("@")[0] || "Someone";
+  const otherMembers = await prisma.groupMember.findMany({
+    where: {
+      groupId: existing.groupId,
+      isActive: true,
+      userId: { not: actorId },
+    },
+  });
+
+  const groupName = updated.group?.name || "Group";
+  for (const member of otherMembers) {
+    await createDbNotification({
+      userId: member.userId,
+      type: "EXPENSE_EDITED",
+      title: "Expense Updated",
+      message: `${updaterName} updated the expense "${updated.description}" to ${updated.originalCurrency} ${updated.originalAmount} in "${groupName}".`,
+    });
+  }
 
   return updated;
 }

@@ -243,13 +243,15 @@ export interface NotificationResponse {
   createdAt: string;
 }
 
-export interface TimelineMembershipResponse {
+export interface TimelineEventResponse {
   id: string;
+  type: "joined" | "left" | "role_changed";
   userId: string;
-  groupId: string;
+  userName: string;
   role: string;
-  joinedAt: string;
-  leftAt: string | null;
+  fromRole?: string;
+  date: string;
+  user?: GroupMemberUser;
 }
 
 export interface ActivityItem {
@@ -361,7 +363,7 @@ export const api = {
       apiFetch<{ balances: GroupBalanceResponse }>(`/api/groups/${groupId}/balances`),
 
     timeline: (groupId: string) =>
-      apiFetch<{ memberships: TimelineMembershipResponse[] }>(`/api/groups/${groupId}/timeline`),
+      apiFetch<{ timelineEvents: TimelineEventResponse[] }>(`/api/groups/${groupId}/timeline`),
 
     imports: (groupId: string) =>
       apiFetch<{ imports: ImportSessionResponse[] }>(`/api/groups/${groupId}/imports`),
@@ -395,10 +397,13 @@ export const api = {
     get: (importSessionId: string) =>
       apiFetch<{ importSession: ImportSessionResponse }>(`/api/imports/${importSessionId}`),
 
-    upload: (groupId: string, file: File) => {
+    upload: (groupId: string, file: File, mapping?: Record<string, string>) => {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("groupId", groupId);
+      if (mapping) {
+        formData.append("mapping", JSON.stringify(mapping));
+      }
       return apiFetch<{ importSession: ImportSessionResponse }>(`/api/groups/${groupId}/imports`, {
         method: "POST",
         body: formData,

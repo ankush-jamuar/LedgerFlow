@@ -28,11 +28,94 @@ export async function listMembers(actorId: string, groupId: string) {
 export async function getMembershipTimeline(actorId: string, groupId: string) {
   await requireGroupRole(groupId, actorId, GroupRole.MEMBER);
 
-  return prisma.groupMember.findMany({
+  const memberships = await prisma.groupMember.findMany({
     where: { groupId },
     include: membershipInclude,
-    orderBy: [{ joinedAt: "asc" }, { updatedAt: "asc" }],
   });
+
+  const logs = await prisma.activityLog.findMany({
+    where: {
+      groupId,
+      action: {
+        in: [
+          ACTIVITY_ACTIONS.MEMBER_ADDED,
+          ACTIVITY_ACTIONS.MEMBER_REMOVED,
+          ACTIVITY_ACTIONS.ROLE_CHANGED,
+        ],
+      },
+    },
+    include: {
+      actor: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const events: any[] = [];
+
+  for (const m of memberships) {
+    const userName = m.user.username || m.user.email?.split("@")[0] || m.userId;
+    events.push({
+      id: `${m.id}-join`,
+      type: "joined",
+      userId: m.userId,
+      userName,
+      role: m.role,
+      date: m.joinedAt.toISOString(),
+      user: {
+        id: m.user.id,
+        username: m.user.username,
+        email: m.user.email,
+        imageUrl: m.user.imageUrl,
+      },
+    });
+
+    if (m.leftAt) {
+      events.push({
+        id: `${m.id}-left`,
+        type: "left",
+        userId: m.userId,
+        userName,
+        role: m.role,
+        date: m.leftAt.toISOString(),
+        user: {
+          id: m.user.id,
+          username: m.user.username,
+          email: m.user.email,
+          imageUrl: m.user.imageUrl,
+        },
+      });
+    }
+  }
+
+  for (const log of logs) {
+    if (log.action === ACTIVITY_ACTIONS.ROLE_CHANGED) {
+      const metadata = log.metadata as { userId?: string; from?: string; to?: string } | null;
+      if (metadata && metadata.userId) {
+        const targetUser = memberships.find((m) => m.userId === metadata.userId)?.user;
+        const userName = targetUser?.username || targetUser?.email?.split("@")[0] || metadata.userId;
+        events.push({
+          id: `${log.id}-role`,
+          type: "role_changed",
+          userId: metadata.userId,
+          userName,
+          role: metadata.to || "MEMBER",
+          fromRole: metadata.from || "MEMBER",
+          date: log.createdAt.toISOString(),
+          user: targetUser ? {
+            id: targetUser.id,
+            username: targetUser.username,
+            email: targetUser.email,
+            imageUrl: targetUser.imageUrl,
+          } : undefined,
+        });
+      }
+    }
+  }
+
+  // Sort chronologically descending (newest first)
+  events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return events;
 }
 
 export async function addMember(

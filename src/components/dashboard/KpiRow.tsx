@@ -67,7 +67,12 @@ export function KpiRow({
       icon: Scale,
       trend: overview.outstandingBalance > 0 ? ("up" as const) : overview.outstandingBalance < 0 ? ("down" as const) : ("neutral" as const),
       positiveIsGood: true,
-      subValue: overview.outstandingBalance >= 0 ? "You are owed" : "You owe money",
+      subValue:
+        overview.outstandingBalance > 0
+          ? "You are owed"
+          : overview.outstandingBalance < 0
+          ? "You owe others"
+          : "Settled",
     },
     {
       label: "Active Groups",

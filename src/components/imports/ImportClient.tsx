@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Tabs } from "@/components/ui/Tabs";
 import type { ImportSessionResponse } from "@/lib/api/client";
+import Papa from "papaparse";
 
 export function ImportClient() {
   const searchParams = useSearchParams();
@@ -49,6 +50,17 @@ export function ImportClient() {
   const [uploadSuccess, setUploadSuccess] = useState<ImportSessionResponse | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [simulatedProgress, setSimulatedProgress] = useState(0);
+
+  // Mapping states
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [columnSamples, setColumnSamples] = useState<Record<string, string[]>>({});
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [csvText, setCsvText] = useState("");
+
+  const isMappingValid = useMemo(() => {
+    const requiredKeys = ["date", "description", "amount", "paidBy", "participants", "splitType"];
+    return requiredKeys.every((key) => !!mapping[key]);
+  }, [mapping]);
 
   // Anomaly Filters
   const [anomalySeverity, setAnomalySeverity] = useState("all");
@@ -85,6 +97,34 @@ export function ImportClient() {
     }
   };
 
+  const suggestClientMapping = (headers: string[]) => {
+    const normalizedHeaders = new Map(
+      headers.map((h) => [h.trim().toLowerCase().replace(/\s+/g, " "), h])
+    );
+    const suggested: Record<string, string> = {};
+
+    const HEADER_ALIASES = {
+      date: ["date", "transaction date", "paid date"],
+      description: ["description", "merchant", "memo", "note"],
+      amount: ["amount", "total", "cost", "value"],
+      paidBy: ["paidby", "paid by", "payer", "paid_by"],
+      participants: ["participants", "members", "split with", "split_with"],
+      splitType: ["splittype", "split type", "split_type"],
+      currency: ["currency", "currency code", "ccy"],
+    };
+
+    for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
+      const matched = aliases
+        .map((alias) => normalizedHeaders.get(alias.trim().toLowerCase().replace(/\s+/g, " ")))
+        .find(Boolean);
+      if (matched) {
+        suggested[field] = matched;
+      }
+    }
+
+    return suggested;
+  };
+
   const validateAndSetFile = (file: File) => {
     if (!file.name.endsWith(".csv")) {
       setUploadError("Only CSV files are supported.");
@@ -95,10 +135,38 @@ export function ImportClient() {
       return;
     }
     setSelectedFile(file);
+
+    // Read headers client-side
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setCsvText(text);
+      Papa.parse(text, {
+        header: true,
+        skipEmptyLines: "greedy",
+        complete: (results) => {
+          const headers = results.meta.fields ?? [];
+          setCsvHeaders(headers);
+
+          const samples: Record<string, string[]> = {};
+          headers.forEach((h) => {
+            samples[h] = results.data
+              .map((row: any) => String(row[h] ?? ""))
+              .filter(Boolean)
+              .slice(0, 3);
+          });
+          setColumnSamples(samples);
+
+          const suggested = suggestClientMapping(headers);
+          setMapping(suggested);
+        },
+      });
+    };
+    reader.readAsText(file);
   };
 
   const handleUploadSubmit = async () => {
-    if (!selectedFile || !activeGroupId) return;
+    if (!selectedFile || !activeGroupId || !isMappingValid) return;
 
     setUploadError(null);
     setUploadSuccess(null);
@@ -116,11 +184,17 @@ export function ImportClient() {
     }, 100);
 
     try {
-      const response = await uploadMutation.mutateAsync(selectedFile);
+      const response = await uploadMutation.mutateAsync({
+        file: selectedFile,
+        mapping,
+      });
       setSimulatedProgress(100);
       clearInterval(interval);
       setUploadSuccess(response.importSession);
       setSelectedFile(null);
+      setCsvHeaders([]);
+      setColumnSamples({});
+      setMapping({});
       void refetchImports();
     } catch (err) {
       clearInterval(interval);
@@ -254,9 +328,10 @@ export function ImportClient() {
           </div>
 
           {selectedFile && (
-            <div className="glass rounded-xl p-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <FileText className="h-6 w-6 text-[var(--color-primary-light)] shrink-0" />
+            <div className="glass rounded-xl p-5 space-y-4">
+              {/* File Info */}
+              <div className="flex items-center gap-3 border-b border-[var(--glass-border)] pb-3 min-w-0">
+                <FileText className="h-7 w-7 text-[var(--color-primary-light)] shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
                     {selectedFile.name}
@@ -267,23 +342,98 @@ export function ImportClient() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedFile(null)}
-                  disabled={uploadMutation.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleUploadSubmit}
-                  loading={uploadMutation.isPending}
-                >
-                  Process CSV
-                </Button>
+              {/* Column Mapping Section */}
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                    Configure CSV Column Mapping
+                  </h4>
+                  <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                    We mapped some columns automatically. Adjust them to match your CSV file structure.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { key: "date", label: "Date Column", desc: "e.g. 2026-06-12", required: true },
+                    { key: "description", label: "Description / Merchant", desc: "e.g. Grocery, Lunch", required: true },
+                    { key: "amount", label: "Amount / Total Cost", desc: "e.g. 150.00", required: true },
+                    { key: "paidBy", label: "Paid By (User identifier)", desc: "e.g. ankush or user email", required: true },
+                    { key: "participants", label: "Participants List", desc: "e.g. ankush, john, amy", required: true },
+                    { key: "splitType", label: "Split Strategy Type", desc: "e.g. EQUAL or PERCENTAGE", required: true },
+                    { key: "currency", label: "Currency (Optional)", desc: "Defaults to group currency if empty", required: false },
+                  ].map((field) => {
+                    const isMapped = !!mapping[field.key];
+                    const selectedColumn = mapping[field.key] || "";
+                    const samples = columnSamples[selectedColumn] ?? [];
+
+                    return (
+                      <div key={field.key} className="space-y-1.5 p-3 rounded-lg border border-[var(--glass-border)] bg-white/[0.01]">
+                        <div className="flex justify-between items-center">
+                          <label className="text-xs font-semibold text-[var(--color-text-primary)]">
+                            {field.label} {field.required && <span className="text-[var(--color-danger-light)]">*</span>}
+                          </label>
+                          {!isMapped && field.required && (
+                            <Badge variant="danger" size="sm">Unmapped</Badge>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-[var(--color-text-muted)]">
+                          {field.desc}
+                        </p>
+                        <select
+                          value={selectedColumn}
+                          onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
+                          className="w-full rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg)] text-xs p-2 text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] cursor-pointer"
+                        >
+                          <option value="">-- Choose Column --</option>
+                          {csvHeaders.map((col) => (
+                            <option key={col} value={col}>{col}</option>
+                          ))}
+                        </select>
+                        {isMapped && samples.length > 0 && (
+                          <p className="text-[9px] text-[var(--color-text-muted)] truncate mt-1">
+                            Samples: {samples.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between border-t border-[var(--glass-border)] pt-4 mt-2">
+                <div className="text-[10px] text-[var(--color-text-muted)] max-w-sm">
+                  {!isMappingValid && (
+                    <span className="text-[var(--color-danger-light)] font-semibold">
+                      Please map all required (*) fields before processing.
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setCsvHeaders([]);
+                      setColumnSamples({});
+                      setMapping({});
+                    }}
+                    disabled={uploadMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleUploadSubmit}
+                    loading={uploadMutation.isPending}
+                    disabled={!isMappingValid}
+                  >
+                    Process CSV
+                  </Button>
+                </div>
               </div>
             </div>
           )}

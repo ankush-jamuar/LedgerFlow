@@ -51,31 +51,7 @@ export function MembershipTimeline({ groupId }: MembershipTimelineProps) {
     );
   }
 
-  const memberships = data?.memberships ?? [];
-
-  // Build timeline events from memberships
-  const events: TimelineEvent[] = [];
-  memberships.forEach((m) => {
-    events.push({
-      id: `${m.id}-join`,
-      type: "joined",
-      userId: m.userId,
-      role: m.role,
-      date: m.joinedAt,
-    });
-    if (m.leftAt) {
-      events.push({
-        id: `${m.id}-left`,
-        type: "left",
-        userId: m.userId,
-        role: m.role,
-        date: m.leftAt,
-      });
-    }
-  });
-
-  // Sort by date descending (most recent first)
-  events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const events = data?.timelineEvents ?? [];
 
   if (events.length === 0) {
     return (
@@ -83,7 +59,7 @@ export function MembershipTimeline({ groupId }: MembershipTimelineProps) {
         <EmptyState
           icon={Clock}
           title="No timeline events"
-          description="Membership events will appear here as members join or leave the group."
+          description="Membership events will appear here as members join, leave, or have roles updated."
           size="sm"
         />
       </GlassCard>
@@ -105,6 +81,11 @@ export function MembershipTimeline({ groupId }: MembershipTimelineProps) {
         <div className="space-y-4">
           {events.map((event, index) => {
             const isJoin = event.type === "joined";
+            const isLeft = event.type === "left";
+
+            const displayName = event.user
+              ? event.user.username || event.user.email?.split("@")[0] || event.userName
+              : event.userName;
 
             return (
               <motion.div
@@ -119,22 +100,28 @@ export function MembershipTimeline({ groupId }: MembershipTimelineProps) {
                   "flex h-6 w-6 items-center justify-center rounded-full flex-shrink-0 z-10",
                   isJoin
                     ? "bg-[var(--color-success-ghost)] text-[var(--color-success-light)]"
-                    : "bg-[var(--color-danger-ghost)] text-[var(--color-danger-light)]"
+                    : isLeft
+                    ? "bg-[var(--color-danger-ghost)] text-[var(--color-danger-light)]"
+                    : "bg-[var(--color-info-ghost)] text-[var(--color-info-light)]"
                 )}>
                   {isJoin ? (
                     <UserPlus className="h-3 w-3" />
-                  ) : (
+                  ) : isLeft ? (
                     <UserMinus className="h-3 w-3" />
+                  ) : (
+                    <Clock className="h-3 w-3" />
                   )}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0 pb-1">
                   <p className="text-sm text-[var(--color-text-primary)]">
-                    <span className="font-medium">{event.userId.slice(0, 12)}...</span>
+                    <span className="font-medium">{displayName}</span>
                     {" "}
-                    {isJoin ? "joined" : "left"} as{" "}
-                    <span className="text-[var(--color-text-secondary)]">{event.role}</span>
+                    {isJoin ? "joined as " : isLeft ? "left the group" : "role updated to "}
+                    {!isLeft && (
+                      <span className="text-[var(--color-text-secondary)]">{event.role}</span>
+                    )}
                   </p>
                   <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
                     {new Date(event.date).toLocaleDateString("en-US", {

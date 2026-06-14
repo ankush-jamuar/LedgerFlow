@@ -13,7 +13,20 @@ export async function GET(req: Request) {
       limit: searchParams.get("limit") ?? undefined,
     });
     const activity = await getRecentDashboardActivity(actorId, query.limit);
-    return NextResponse.json({ activity });
+    
+    const activities = activity.map((log) => ({
+      id: log.id,
+      action: log.action,
+      actorId: log.actorId,
+      targetId: log.entityId,
+      groupId: log.groupId,
+      payload: log.metadata,
+      createdAt: log.createdAt.toISOString(),
+      actor: log.actor,
+      group: log.group,
+    }));
+
+    return NextResponse.json({ activities });
   } catch (error) {
     return handleServiceError(error);
   }

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { useGroups, useGroupMembers, GROUP_QUERY_KEYS } from "@/lib/hooks/use-groups";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
+import { useToast } from "@/components/ui/Toast";
 
 interface CreateExpenseModalProps {
   groupId?: string; // Optional: Lock to a specific group
@@ -38,6 +39,7 @@ export function CreateExpenseModal({
   onSuccess,
 }: CreateExpenseModalProps) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const { data: groupsData } = useGroups();
   const groups = useMemo(() => groupsData?.groups ?? [], [groupsData?.groups]);
 
@@ -77,25 +79,23 @@ export function CreateExpenseModal({
     setPrevSelectedGroupId(selectedGroupId);
   }
 
-  // Set default paidById and check all members when members load
-  const [prevMembers, setPrevMembers] = useState(members);
-  if (members !== prevMembers) {
-    if (members.length > 0) {
-      // Find an owner or admin to default as payer, or first member
-      const defaultPayer = members.find((m) => m.role === "OWNER" || m.role === "ADMIN") || members[0];
-      setPaidById(defaultPayer.userId);
+  // Set default paidById and check all members when selectedGroupId changes, but only once when members load
+  const [prevGroupIdForMembers, setPrevGroupIdForMembers] = useState("");
+  if (selectedGroupId !== prevGroupIdForMembers && !isMembersLoading && members.length > 0) {
+    // Find an owner or admin to default as payer, or first member
+    const defaultPayer = members.find((m) => m.role === "OWNER" || m.role === "ADMIN") || members[0];
+    setPaidById(defaultPayer.userId);
 
-      // Check all by default
-      const checks: Record<string, boolean> = {};
-      const vals: Record<string, string> = {};
-      members.forEach((m) => {
-        checks[m.userId] = true;
-        vals[m.userId] = "";
-      });
-      setParticipantsCheck(checks);
-      setSplitValues(vals);
-    }
-    setPrevMembers(members);
+    // Check all by default
+    const checks: Record<string, boolean> = {};
+    const vals: Record<string, string> = {};
+    members.forEach((m) => {
+      checks[m.userId] = true;
+      vals[m.userId] = "";
+    });
+    setParticipantsCheck(checks);
+    setSplitValues(vals);
+    setPrevGroupIdForMembers(selectedGroupId);
   }
 
   const activeGroupOptions = useMemo(() => {
@@ -117,9 +117,12 @@ export function CreateExpenseModal({
   const createExpenseMutation = useMutation({
     mutationFn: (data: unknown) => api.groups.createExpense(selectedGroupId, data),
     onSuccess: () => {
+      toast.success("Expense added successfully!");
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.expenses(selectedGroupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.balances(selectedGroupId) });
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(selectedGroupId) });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       if (onSuccess) onSuccess();
       handleClose();
     },
@@ -284,10 +287,10 @@ export function CreateExpenseModal({
                 />
               </div>
               <Input
-                label="Currency"
+                label="Group Currency"
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                maxLength={3}
+                disabled
+                readOnly
                 id="expense-currency"
               />
             </div>

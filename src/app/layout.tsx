@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { ClerkAuthProvider } from "@/providers/clerk-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 const inter = Inter({
@@ -64,7 +65,9 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         <ThemeProvider>
           <ClerkAuthProvider>
-            <QueryProvider>{children}</QueryProvider>
+            <QueryProvider>
+              <ToastProvider>{children}</ToastProvider>
+            </QueryProvider>
           </ClerkAuthProvider>
         </ThemeProvider>
       </body>

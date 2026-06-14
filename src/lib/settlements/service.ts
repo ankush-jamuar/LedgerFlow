@@ -61,11 +61,12 @@ export async function createSettlement(
   actorId: string,
   input: CreateSettlementInput
 ) {
-  await assertGroupIsOpen(input.groupId);
+  const group = await assertGroupIsOpen(input.groupId);
   await requireGroupRole(input.groupId, actorId, GroupRole.MEMBER);
   await validateSettlementMembers(input.groupId, input.payerId, input.receiverId);
 
-  const baseAmount = calculateBaseAmount(input.originalAmount, input.exchangeRate);
+  const currency = group.currency;
+  const baseAmount = input.originalAmount;
 
   const settlement = await prisma.settlement.create({
     data: {
@@ -75,8 +76,8 @@ export async function createSettlement(
       note: input.note ?? null,
       settledAt: input.settledAt,
       originalAmount: toMoneyDecimal(input.originalAmount),
-      originalCurrency: input.originalCurrency,
-      exchangeRate: new Prisma.Decimal(input.exchangeRate.toFixed(6)),
+      originalCurrency: currency,
+      exchangeRate: new Prisma.Decimal("1.000000"),
       baseAmount: toMoneyDecimal(baseAmount),
     },
     include: settlementInclude,
@@ -121,7 +122,7 @@ export async function updateSettlement(
     notFound("Settlement not found");
   }
 
-  await assertGroupIsOpen(existing.groupId);
+  const group = await assertGroupIsOpen(existing.groupId);
   await requireGroupRole(existing.groupId, actorId, GroupRole.ADMIN);
   await validateSettlementMembers(
     existing.groupId,
@@ -131,9 +132,7 @@ export async function updateSettlement(
 
   const originalAmount =
     input.originalAmount ?? Number(existing.originalAmount.toString());
-  const exchangeRate =
-    input.exchangeRate ?? Number(existing.exchangeRate.toString());
-  const baseAmount = calculateBaseAmount(originalAmount, exchangeRate);
+  const baseAmount = originalAmount;
 
   const settlement = await prisma.settlement.update({
     where: { id: settlementId },
@@ -141,8 +140,8 @@ export async function updateSettlement(
       note: input.note,
       settledAt: input.settledAt,
       originalAmount: toMoneyDecimal(originalAmount),
-      originalCurrency: input.originalCurrency ?? existing.originalCurrency,
-      exchangeRate: new Prisma.Decimal(exchangeRate.toFixed(6)),
+      originalCurrency: group.currency,
+      exchangeRate: new Prisma.Decimal("1.000000"),
       baseAmount: toMoneyDecimal(baseAmount),
     },
     include: settlementInclude,
