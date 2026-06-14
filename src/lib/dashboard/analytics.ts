@@ -1,4 +1,3 @@
-import { ExpenseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { calculateGroupBalances } from "@/lib/balances";
 import type {
@@ -98,8 +97,8 @@ export async function getGroupAnalytics(
     groups.length === 0
       ? null
       : groups.reduce((largest, group) =>
-          group._count.memberships > largest._count.memberships ? group : largest
-        );
+        group._count.memberships > largest._count.memberships ? group : largest
+      );
   const newestGroup = groups[0] ?? null;
 
   return {
@@ -109,17 +108,17 @@ export async function getGroupAnalytics(
       groups.length === 0 ? 0 : roundMoney(totalMembers / groups.length),
     largestGroup: largestGroup
       ? {
-          id: largestGroup.id,
-          name: largestGroup.name,
-          memberCount: largestGroup._count.memberships,
-        }
+        id: largestGroup.id,
+        name: largestGroup.name,
+        memberCount: largestGroup._count.memberships,
+      }
       : null,
     newestGroup: newestGroup
       ? {
-          id: newestGroup.id,
-          name: newestGroup.name,
-          createdAt: newestGroup.createdAt.toISOString(),
-        }
+        id: newestGroup.id,
+        name: newestGroup.name,
+        createdAt: newestGroup.createdAt.toISOString(),
+      }
       : null,
     archivedGroups: groups.filter((group) => group.isArchived).length,
   };
@@ -132,7 +131,7 @@ export async function getExpenseAnalytics(
   const thisMonth = currentMonthRange();
   const lastMonth = lastMonthRange();
   const expenses = await prisma.expense.findMany({
-    where: { groupId: { in: groupIds }, status: ExpenseStatus.ACTIVE },
+    where: { groupId: { in: groupIds }, status: "ACTIVE" },
     orderBy: { date: "desc" },
   });
 
