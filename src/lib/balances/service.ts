@@ -1,4 +1,4 @@
-import { ExpenseStatus, GroupRole } from "@prisma/client";
+import { $Enums } from "@prisma/client";
 import { notFound } from "@/lib/api/http";
 import { prisma } from "@/lib/db/prisma";
 import { calculateSplitAllocations } from "@/lib/expenses/splits";
@@ -32,14 +32,14 @@ export async function calculateGroupBalances(
   actorId: string,
   groupId: string
 ): Promise<GroupBalanceResult> {
-  await requireGroupRole(groupId, actorId, GroupRole.MEMBER);
+  await requireGroupRole(groupId, actorId, $Enums.GroupRole.MEMBER);
 
   const group = await prisma.group.findUnique({
     where: { id: groupId },
     include: {
       memberships: true,
       expenses: {
-        where: { status: ExpenseStatus.ACTIVE },
+        where: { status: $Enums.ExpenseStatus.ACTIVE },
         include: { participants: true },
       },
       settlements: true,
