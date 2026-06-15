@@ -6,7 +6,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
-import { GROUP_QUERY_KEYS } from "./use-groups";
+import { invalidateGroupFinancialCaches } from "./invalidate-group-caches";
 
 export const EXPENSE_QUERY_KEYS = {
   detail: (expenseId: string) => ["expenses", expenseId] as const,
@@ -25,13 +25,9 @@ export function useUpdateExpense(expenseId: string, groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: unknown) => api.expenses.update(expenseId, data),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: EXPENSE_QUERY_KEYS.detail(expenseId) });
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.expenses(groupId) });
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.balances(groupId) });
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(groupId) });
-      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: EXPENSE_QUERY_KEYS.detail(expenseId) });
+      await invalidateGroupFinancialCaches(queryClient, groupId);
     },
   });
 }
@@ -40,12 +36,8 @@ export function useDeleteExpense(expenseId: string, groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => api.expenses.delete(expenseId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.expenses(groupId) });
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.balances(groupId) });
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(groupId) });
-      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    onSuccess: async () => {
+      await invalidateGroupFinancialCaches(queryClient, groupId);
     },
   });
 }

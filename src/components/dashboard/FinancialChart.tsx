@@ -11,7 +11,6 @@ import { useMemo, useState } from "react";
 import { LineChart, ArrowUpRight } from "lucide-react";
 import { formatMoney } from "@/lib/utils/format-money";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
 import type { DashboardReports } from "@/lib/dashboard/types";
 
 interface FinancialChartProps {

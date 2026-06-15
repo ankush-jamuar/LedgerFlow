@@ -61,25 +61,35 @@ export function KpiCard({
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
       whileHover={{ y: -2, transition: { duration: 0.15 } }}
       className={cn(
-        "glass rounded-xl p-5 relative overflow-hidden",
-        "hover:border-[var(--glass-border-hover)] transition-colors",
+        "glass rounded-xl p-5 relative overflow-hidden flex flex-col justify-between",
+        "hover:border-[var(--glass-border-hover)] transition-colors min-h-[120px]",
         className
       )}
     >
       {/* Top gradient accent */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--color-primary)]/30 to-transparent" />
 
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-            {label}
-          </p>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">
-            {value}
-          </p>
-          {subValue && (
-            <p className={cn(
-              "mt-0.5 text-xs",
+      {/* Header row: label + icon */}
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] leading-tight">
+          {label}
+        </p>
+        {Icon && (
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary-ghost)]">
+            <Icon className="h-4 w-4 text-[var(--color-primary-light)]" />
+          </div>
+        )}
+      </div>
+
+      {/* Value + sub-value */}
+      <div className="mt-3">
+        <p className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)] leading-none break-all">
+          {value}
+        </p>
+        {subValue && (
+          <p
+            className={cn(
+              "mt-1.5 text-xs leading-snug",
               label === "Net Outstanding"
                 ? trend === "up"
                   ? "text-[var(--color-success-light)] font-semibold"
@@ -87,21 +97,15 @@ export function KpiCard({
                   ? "text-[var(--color-danger-light)] font-semibold"
                   : "text-[var(--color-text-muted)]"
                 : "text-[var(--color-text-muted)]"
-            )}>
-              {subValue}
-            </p>
-          )}
-          {delta && (
-            <div className={cn("mt-2 flex items-center gap-1", trendColor)}>
-              <TrendIcon className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="text-xs font-medium">{delta}</span>
-            </div>
-          )}
-        </div>
-
-        {Icon && (
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-ghost)]">
-            <Icon className="h-5 w-5 text-[var(--color-primary-light)]" />
+            )}
+          >
+            {subValue}
+          </p>
+        )}
+        {delta && (
+          <div className={cn("mt-2 flex items-center gap-1", trendColor)}>
+            <TrendIcon className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="text-xs font-semibold">{delta}</span>
           </div>
         )}
       </div>

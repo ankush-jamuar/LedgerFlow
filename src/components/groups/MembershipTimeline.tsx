@@ -19,13 +19,7 @@ interface MembershipTimelineProps {
   groupId: string;
 }
 
-interface TimelineEvent {
-  id: string;
-  type: "joined" | "left";
-  userId: string;
-  role: string;
-  date: string;
-}
+
 
 export function MembershipTimeline({ groupId }: MembershipTimelineProps) {
   const { data, isLoading } = useGroupTimeline(groupId);

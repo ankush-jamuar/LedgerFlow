@@ -34,6 +34,20 @@ const splitTypeSchema = z.enum([
   SplitType.SHARES,
 ]);
 
+function normalizeSplitTypeInput(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  const aliases: Record<string, string> = {
+    equal: SplitType.EQUAL,
+    unequal: SplitType.EXACT,
+    exact: SplitType.EXACT,
+    percentage: SplitType.PERCENTAGE,
+    percent: SplitType.PERCENTAGE,
+    share: SplitType.SHARES,
+    shares: SplitType.SHARES,
+  };
+  return aliases[normalized] ?? value.trim().toUpperCase();
+}
+
 function normalize(value: string) {
   return value.trim().toLowerCase();
 }
@@ -57,11 +71,55 @@ function toCurrency(value: string): string {
 }
 
 function parseDate(value: string): Date | null {
-  if (!value.trim()) {
+  const trimmed = value.trim();
+  if (!trimmed) {
     return null;
   }
 
-  const parsed = new Date(value);
+  // DD-MM-YYYY or DD/MM/YYYY
+  const dmy = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (dmy) {
+    const day = Number(dmy[1]);
+    const month = Number(dmy[2]);
+    const year = Number(dmy[3]);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    if (
+      parsed.getUTCFullYear() === year &&
+      parsed.getUTCMonth() === month - 1 &&
+      parsed.getUTCDate() === day
+    ) {
+      return parsed;
+    }
+    return null;
+  }
+
+  // YYYY-MM-DD
+  const iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const year = Number(iso[1]);
+    const month = Number(iso[2]);
+    const day = Number(iso[3]);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    if (
+      parsed.getUTCFullYear() === year &&
+      parsed.getUTCMonth() === month - 1 &&
+      parsed.getUTCDate() === day
+    ) {
+      return parsed;
+    }
+    return null;
+  }
+
+  // Mon-DD or Mon-YY style e.g. Mar-14 (assume current year from context)
+  const monDay = trimmed.match(/^([A-Za-z]{3})-(\d{1,2})$/);
+  if (monDay) {
+    const parsed = new Date(`${monDay[1]} ${monDay[2]}, 2026`);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  const parsed = new Date(trimmed);
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
@@ -215,7 +273,8 @@ function makeConflictSignature(row: ValidImportExpense) {
 
 export async function validateImportRows(
   groupId: string,
-  rows: ParsedImportRow[]
+  rows: ParsedImportRow[],
+  groupDefaultCurrency = "INR"
 ): Promise<ImportValidationResult> {
   const memberships = await prisma.groupMember.findMany({
     where: { groupId },
@@ -268,11 +327,14 @@ export async function validateImportRows(
   for (const row of rows) {
     const rowAnomalies: ImportAnomalyDraft[] = [];
     const amount = toMoney(row.amount);
-    const currency = row.currency
+    const currencyRaw = row.currency?.trim()
       ? toCurrency(row.currency)
-      : undefined;
+      : toCurrency(groupDefaultCurrency);
+    const currency = currencyRaw.length === 3 ? currencyRaw : undefined;
     const date = parseDate(row.date);
-    const splitTypeResult = splitTypeSchema.safeParse(row.splitType.toUpperCase());
+    const splitTypeResult = splitTypeSchema.safeParse(
+      normalizeSplitTypeInput(row.splitType)
+    );
     const payer = resolveMember(row.paidBy, memberIndex);
 
     if (currency) {

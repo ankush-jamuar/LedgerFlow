@@ -35,13 +35,15 @@ export function SkeletonText({ className }: { className?: string }) {
 /** Skeleton for a KPI card */
 export function SkeletonKpiCard() {
   return (
-    <div className="glass rounded-xl p-5 space-y-3" aria-hidden="true">
-      <div className="flex items-center justify-between">
+    <div className="glass rounded-xl p-5 flex flex-col justify-between min-h-[120px]" aria-hidden="true">
+      <div className="flex items-start justify-between">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-8 w-8" rounded />
       </div>
-      <Skeleton className="h-8 w-32" />
-      <Skeleton className="h-3 w-20" />
+      <div className="space-y-1.5 mt-3">
+        <Skeleton className="h-7 w-28" />
+        <Skeleton className="h-3 w-20" />
+      </div>
     </div>
   );
 }

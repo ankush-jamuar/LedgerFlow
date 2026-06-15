@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { formatMoney } from "@/lib/utils/format-money";
+import { convertAmount } from "@/lib/currency/exchange";
 import { RecordSettlementModal } from "@/components/settlements/RecordSettlementModal";
 
 export function SettlementsClient() {
@@ -102,9 +103,9 @@ export function SettlementsClient() {
 
   // Global user summary across all groups
   const userOwedSummary = useMemo(() => {
-    let totalOwed = 0; // you owe others (payable)
-    let totalReceivable = 0; // others owe you (receivable)
-    const currencies = new Set<string>();
+    let totalOwed = 0;
+    let totalReceivable = 0;
+    const displayCurrency = "INR";
 
     balancesQueries.forEach((query, index) => {
       const group = groups[index];
@@ -112,26 +113,21 @@ export function SettlementsClient() {
       if (balances && group && currentUserId) {
         const userBalance = balances.members.find((m) => m.userId === currentUserId);
         if (userBalance) {
-          // netBalance > 0: Group owes you (receivable)
-          // netBalance < 0: You owe the group (payable)
           const net = userBalance.netBalance;
           if (net > 0) {
-            totalReceivable += net;
+            totalReceivable += convertAmount(net, group.currency, displayCurrency);
           } else if (net < 0) {
-            totalOwed += Math.abs(net);
+            totalOwed += convertAmount(Math.abs(net), group.currency, displayCurrency);
           }
-          currencies.add(group.currency);
         }
       }
     });
-
-    const currencySymbol = currencies.size === 1 ? Array.from(currencies)[0] : "USD";
 
     return {
       totalOwed,
       totalReceivable,
       netBalance: totalReceivable - totalOwed,
-      currencySymbol,
+      currencySymbol: displayCurrency,
     };
   }, [balancesQueries, groups, currentUserId]);
 
@@ -774,7 +770,6 @@ export function SettlementsClient() {
         <RecordSettlementModal
           open={showRecordModal}
           onClose={() => setShowRecordModal(false)}
-          onSuccess={handleRefetch}
         />
       )}
     </div>

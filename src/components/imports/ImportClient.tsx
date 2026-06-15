@@ -55,7 +55,6 @@ export function ImportClient() {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [columnSamples, setColumnSamples] = useState<Record<string, string[]>>({});
   const [mapping, setMapping] = useState<Record<string, string>>({});
-  const [csvText, setCsvText] = useState("");
 
   const isMappingValid = useMemo(() => {
     const requiredKeys = ["date", "description", "amount", "paidBy", "participants", "splitType"];
@@ -140,7 +139,6 @@ export function ImportClient() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      setCsvText(text);
       Papa.parse(text, {
         header: true,
         skipEmptyLines: "greedy",

@@ -125,7 +125,7 @@ export function ActivityFeed({ activities = [], loading = false }: ActivityFeedP
         <h3 className="font-semibold text-sm text-[var(--color-text-primary)]">Recent Activity</h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-1 max-h-[380px] custom-scrollbar space-y-3.5 relative">
+      <div className="flex-1 overflow-y-auto pr-1 max-h-[560px] custom-scrollbar space-y-3.5 relative">
         {/* Continuous vertical line */}
         <div className="absolute left-[18px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-[var(--glass-border)] via-[var(--glass-border)]/50 to-transparent pointer-events-none" />
 

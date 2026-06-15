@@ -68,7 +68,7 @@ const QUICK_ACTIONS = [
     glow: "rgba(6, 182, 212, 0.2)",
   },
   {
-    label: "View Balances",
+    label: "Balance Overview",
     icon: Scale,
     gradient: "from-amber-500 to-orange-600",
     glow: "rgba(245, 158, 11, 0.2)",
@@ -84,6 +84,7 @@ export function GroupDetailClient({ groupId }: GroupDetailClientProps) {
   const [showAddMember, setShowAddMember] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showRecordSettlement, setShowRecordSettlement] = useState(false);
+  const [balanceFocusRequest, setBalanceFocusRequest] = useState(false);
 
   if (error) {
     return (
@@ -104,14 +105,10 @@ export function GroupDetailClient({ groupId }: GroupDetailClientProps) {
       setShowRecordSettlement(true);
     } else if (label === "Import CSV") {
       router.push(`/import?groupId=${groupId}`);
-    } else if (label === "View Balances") {
+    } else if (label === "Balance Overview") {
+      // Switch to overview tab and request balance focus/highlight
       setActiveTab("overview");
-      setTimeout(() => {
-        const el = document.getElementById("balance-overview");
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }, 100);
+      setBalanceFocusRequest(true);
     }
   };
 
@@ -226,7 +223,13 @@ export function GroupDetailClient({ groupId }: GroupDetailClientProps) {
 
       {/* Tab Content */}
       <div className="min-h-[300px]">
-        {activeTab === "overview" && <GroupOverviewTab groupId={groupId} />}
+        {activeTab === "overview" && (
+          <GroupOverviewTab
+            groupId={groupId}
+            focusBalances={balanceFocusRequest}
+            onBalanceFocusHandled={() => setBalanceFocusRequest(false)}
+          />
+        )}
         {activeTab === "expenses" && <GroupExpensesTab groupId={groupId} />}
         {activeTab === "settlements" && <GroupSettlementsTab groupId={groupId} />}
         {activeTab === "members" && (
@@ -248,12 +251,14 @@ export function GroupDetailClient({ groupId }: GroupDetailClientProps) {
         groupId={groupId}
         open={showAddExpense}
         onClose={() => setShowAddExpense(false)}
+        onSuccess={() => setActiveTab("expenses")}
       />
 
       <RecordSettlementModal
         groupId={groupId}
         open={showRecordSettlement}
         onClose={() => setShowRecordSettlement(false)}
+        onSuccess={() => setActiveTab("settlements")}
       />
     </div>
   );

@@ -44,14 +44,14 @@ export function DashboardClient() {
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6">
-      {/* 6-Up KPI Metric Row */}
+    <div className="space-y-8">
+      {/* KPI Row */}
       <KpiRow overview={undefined} loading={true} currencyPreference="INR" />
 
       {/* Main Grid Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Side: Trends and analytics */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Left: chart + insights */}
+        <div className="xl:col-span-2 space-y-6">
           <FinancialChart reports={undefined} loading={true} currencyPreference="INR" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <ImportInsights reports={undefined} loading={true} />
@@ -59,8 +59,8 @@ function DashboardSkeleton() {
           </div>
         </div>
 
-        {/* Right Side: Tall Activity Feed */}
-        <div className="lg:col-span-1">
+        {/* Right: activity feed */}
+        <div className="xl:col-span-1">
           <ActivityFeed activities={[]} loading={true} />
         </div>
       </div>
@@ -126,30 +126,30 @@ function DashboardInner() {
   const activities = activityData?.activities ?? [];
 
   return (
-    <div className="space-y-6">
-      {/* 6-Up KPI Metric Row */}
-      <KpiRow
-        overview={overview}
-        loading={isOverviewLoading}
-        currencyPreference={currency}
-      />
+    <div className="space-y-8">
+      {/* KPI Metric Row — 6-up grid */}
+      <section aria-label="Key performance indicators">
+        <KpiRow
+          overview={overview}
+          loading={isOverviewLoading}
+          currencyPreference={currency}
+        />
+      </section>
 
-      {/* Main Grid Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Side: Trends and analytics */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Monthly line sparkline */}
+      {/* Main Grid: chart + cards + activity */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+        {/* Left: Financial trends + import/anomaly cards */}
+        <div className="xl:col-span-2 space-y-6">
+          {/* Financial Health sparkline */}
           <FinancialChart
             reports={reports}
             loading={isReportsLoading}
             currencyPreference={currency}
           />
 
+          {/* Import + Anomaly panel row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Import reconciliation stats */}
             <ImportInsights reports={reports} loading={isReportsLoading} />
-
-            {/* Anomaly list and metrics */}
             <AnomalyCenter
               anomalyOverview={anomalies}
               loading={isAnomaliesLoading}
@@ -157,8 +157,8 @@ function DashboardInner() {
           </div>
         </div>
 
-        {/* Right Side: Tall Activity Feed */}
-        <div className="lg:col-span-1">
+        {/* Right: Activity Feed — full height */}
+        <div className="xl:col-span-1 xl:sticky xl:top-6">
           <ActivityFeed activities={activities} loading={isActivityLoading} />
         </div>
       </div>

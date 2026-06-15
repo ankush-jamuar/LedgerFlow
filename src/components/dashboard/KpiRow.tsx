@@ -44,7 +44,7 @@ export function KpiRow({
   // If loading or overview is not available yet, render 6 loading skeleton cards
   if (loading || !overview) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
           <KpiCard key={i} label="" value="" loading />
         ))}
@@ -69,10 +69,10 @@ export function KpiRow({
       positiveIsGood: true,
       subValue:
         overview.outstandingBalance > 0
-          ? "You are owed"
+          ? "Creditor — you are owed"
           : overview.outstandingBalance < 0
-          ? "You owe others"
-          : "Settled",
+          ? "Debtor — you owe others"
+          : "All settled up",
     },
     {
       label: "Active Groups",
@@ -105,7 +105,7 @@ export function KpiRow({
       variants={containerVariants}
       initial="hidden"
       animate="show"
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+      className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6"
     >
       {cards.map((card, index) => (
         <KpiCard

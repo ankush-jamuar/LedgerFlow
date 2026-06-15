@@ -43,7 +43,7 @@ export function EditExpenseModal({
 
   const [description, setDescription] = useState(expense.description);
   const [amount, setAmount] = useState(parseFloat(expense.originalAmount).toString());
-  const [currency, setCurrency] = useState(expense.originalCurrency);
+  const currency = expense.originalCurrency;
   const [date, setDate] = useState(() => new Date(expense.date).toISOString().split("T")[0]);
   const [paidById, setPaidById] = useState(expense.paidById);
   const [splitType, setSplitType] = useState(expense.splitType);
@@ -190,7 +190,6 @@ export function EditExpenseModal({
         date: new Date(date).toISOString(),
         originalAmount: parsedAmount,
         originalCurrency: currency,
-        exchangeRate: 1,
         participants: participantsPayload,
         receiptUrl: receiptUrl.trim() || null,
       });

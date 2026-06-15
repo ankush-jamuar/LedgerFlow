@@ -13,7 +13,8 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { useGroups, useGroupMembers, GROUP_QUERY_KEYS } from "@/lib/hooks/use-groups";
+import { useGroups, useGroupMembers } from "@/lib/hooks/use-groups";
+import { invalidateGroupFinancialCaches } from "@/lib/hooks/invalidate-group-caches";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { useToast } from "@/components/ui/Toast";
@@ -43,7 +44,18 @@ export function RecordSettlementModal({
   const [payerId, setPayerId] = useState("");
   const [receiverId, setReceiverId] = useState("");
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("USD");
+
+  // Initialize currency from group data — never hardcode USD
+  const getInitialCurrency = () => {
+    const gid = initialGroupId || "";
+    if (gid) {
+      const g = groupsData?.groups?.find((g) => g.id === gid);
+      if (g) return g.currency;
+    }
+    return "INR"; // safe fallback until group loads
+  };
+
+  const [currency, setCurrency] = useState(getInitialCurrency);
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [note, setNote] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -63,6 +75,16 @@ export function RecordSettlementModal({
       setCurrency(activeGroup.currency);
     }
     setPrevSelectedGroupId(selectedGroupId);
+  }
+
+  // Also update currency when groups data loads for the first time
+  const [currencyInitialized, setCurrencyInitialized] = useState(false);
+  if (!currencyInitialized && groups.length > 0 && selectedGroupId) {
+    const activeGroup = groups.find((g) => g.id === selectedGroupId);
+    if (activeGroup) {
+      setCurrency(activeGroup.currency);
+      setCurrencyInitialized(true);
+    }
   }
 
   // Set default payer/receiver when selectedGroupId changes, but only once when members load
@@ -92,18 +114,21 @@ export function RecordSettlementModal({
     });
   }, [members]);
 
+  const resetForm = () => {
+    setAmount("");
+    setNote("");
+    setErrors({});
+  };
+
   // Mutation to record settlement
   const recordSettlementMutation = useMutation({
     mutationFn: (data: unknown) => api.groups.createSettlement(selectedGroupId, data),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Settlement recorded successfully!");
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.settlements(selectedGroupId) });
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.balances(selectedGroupId) });
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(selectedGroupId) });
-      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      if (onSuccess) onSuccess();
-      handleClose();
+      await invalidateGroupFinancialCaches(queryClient, selectedGroupId);
+      resetForm();
+      onSuccess?.();
+      onClose();
     },
   });
 
@@ -152,7 +177,6 @@ export function RecordSettlementModal({
         settledAt: new Date(date).toISOString(),
         originalAmount: parsedAmount,
         originalCurrency: currency,
-        exchangeRate: 1,
       });
     } catch (err) {
       setErrors({ form: err instanceof Error ? err.message : "Failed to record settlement" });

@@ -13,7 +13,8 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { useGroups, useGroupMembers, GROUP_QUERY_KEYS } from "@/lib/hooks/use-groups";
+import { useGroups, useGroupMembers } from "@/lib/hooks/use-groups";
+import { invalidateGroupFinancialCaches } from "@/lib/hooks/invalidate-group-caches";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { useToast } from "@/components/ui/Toast";
@@ -47,9 +48,18 @@ export function CreateExpenseModal({
   const { data: membersData, isLoading: isMembersLoading } = useGroupMembers(selectedGroupId);
   const members = useMemo(() => membersData?.members ?? [], [membersData?.members]);
 
+  // Derive initial currency from the locked group, falling back to first group loaded
+  const getInitialCurrency = () => {
+    if (initialGroupId) {
+      const g = groupsData?.groups?.find((g) => g.id === initialGroupId);
+      if (g) return g.currency;
+    }
+    return "INR"; // safe fallback until group loads
+  };
+
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState(getInitialCurrency);
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [paidById, setPaidById] = useState("");
   const [splitType, setSplitType] = useState("EQUAL");
@@ -69,7 +79,7 @@ export function CreateExpenseModal({
     setPrevInitialGroupId(initialGroupId);
   }
 
-  // Set default currency when group changes
+  // Set default currency when group changes or when groups data first loads
   const [prevSelectedGroupId, setPrevSelectedGroupId] = useState(selectedGroupId);
   if (selectedGroupId !== prevSelectedGroupId) {
     const activeGroup = groups.find((g) => g.id === selectedGroupId);
@@ -77,6 +87,16 @@ export function CreateExpenseModal({
       setCurrency(activeGroup.currency);
     }
     setPrevSelectedGroupId(selectedGroupId);
+  }
+
+  // Also update currency when groups data loads for the first time (initial render with groupId prop)
+  const [currencyInitialized, setCurrencyInitialized] = useState(false);
+  if (!currencyInitialized && groups.length > 0 && selectedGroupId) {
+    const activeGroup = groups.find((g) => g.id === selectedGroupId);
+    if (activeGroup) {
+      setCurrency(activeGroup.currency);
+      setCurrencyInitialized(true);
+    }
   }
 
   // Set default paidById and check all members when selectedGroupId changes, but only once when members load
@@ -113,18 +133,23 @@ export function CreateExpenseModal({
     return Object.keys(participantsCheck).filter((id) => participantsCheck[id]);
   }, [participantsCheck]);
 
+  const resetForm = () => {
+    setDescription("");
+    setAmount("");
+    setSplitType("EQUAL");
+    setReceiptUrl("");
+    setErrors({});
+  };
+
   // Mutation to create expense
   const createExpenseMutation = useMutation({
     mutationFn: (data: unknown) => api.groups.createExpense(selectedGroupId, data),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Expense added successfully!");
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.expenses(selectedGroupId) });
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.balances(selectedGroupId) });
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.timeline(selectedGroupId) });
-      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      if (onSuccess) onSuccess();
-      handleClose();
+      await invalidateGroupFinancialCaches(queryClient, selectedGroupId);
+      resetForm();
+      onSuccess?.();
+      onClose();
     },
   });
 
@@ -233,7 +258,6 @@ export function CreateExpenseModal({
         date: new Date(date).toISOString(),
         originalAmount: parsedAmount,
         originalCurrency: currency,
-        exchangeRate: 1,
         participants: participantsPayload,
         receiptUrl: receiptUrl.trim() || null,
       });

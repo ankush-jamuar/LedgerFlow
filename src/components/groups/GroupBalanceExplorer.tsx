@@ -14,12 +14,17 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils/cn";
+import { formatMoney } from "@/lib/utils/format-money";
 
 interface GroupBalanceExplorerProps {
   groupId: string;
+  highlighted?: boolean;
 }
 
-export function GroupBalanceExplorer({ groupId }: GroupBalanceExplorerProps) {
+export function GroupBalanceExplorer({
+  groupId,
+  highlighted = false,
+}: GroupBalanceExplorerProps) {
   const { data: groupData } = useGroup(groupId);
   const { data: balancesData, isLoading: isBalancesLoading } = useGroupBalances(groupId);
   const { data: membersData, isLoading: isMembersLoading } = useGroupMembers(groupId);
@@ -68,7 +73,11 @@ export function GroupBalanceExplorer({ groupId }: GroupBalanceExplorerProps) {
   }
 
   return (
-    <GlassCard>
+    <GlassCard
+      className={cn(
+        highlighted && "ring-2 ring-[var(--color-primary-light)] ring-offset-2 ring-offset-[var(--color-brand-surface)]"
+      )}
+    >
       <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
         <Scale className="h-4 w-4 text-[var(--color-primary-light)]" />
         Balance Overview
@@ -111,10 +120,8 @@ export function GroupBalanceExplorer({ groupId }: GroupBalanceExplorerProps) {
                   : isZero ? "text-[var(--color-text-muted)]"
                   : "text-[var(--color-danger-light)]"
               )}>
-                {isPositive ? "+" : ""}{balance.netBalance.toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {isPositive ? "+" : isZero ? "" : "-"}
+                {formatMoney(Math.abs(net), currency)}
               </span>
             </motion.div>
           );
@@ -144,10 +151,7 @@ export function GroupBalanceExplorer({ groupId }: GroupBalanceExplorerProps) {
                   {getMemberName(debt.receiverId)}
                 </span>
                 <span className="ml-auto text-xs font-semibold text-[var(--color-text-primary)]">
-                  {currency} {debt.amount.toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatMoney(debt.amount, currency)}
                 </span>
               </motion.div>
             ))}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getImportSession } from "@/lib/imports";
+import { serializeImportSession } from "@/lib/imports/serialize";
 import {
   handleServiceError,
   requireCurrentUserId,
@@ -14,7 +15,9 @@ export async function GET(_req: Request, context: RouteContext) {
     const actorId = await requireCurrentUserId();
     const { importSessionId } = await context.params;
     const importSession = await getImportSession(actorId, importSessionId);
-    return NextResponse.json({ importSession });
+    return NextResponse.json({
+      importSession: serializeImportSession(importSession),
+    });
   } catch (error) {
     return handleServiceError(error);
   }

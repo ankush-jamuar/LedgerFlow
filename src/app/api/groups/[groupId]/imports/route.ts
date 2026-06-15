@@ -4,6 +4,7 @@ import {
   createImportSession,
   listImportSessions,
 } from "@/lib/imports";
+import { serializeImportSession } from "@/lib/imports/serialize";
 import {
   badRequest,
   handleServiceError,
@@ -15,9 +16,12 @@ interface RouteContext {
   params: Promise<{ groupId: string }>;
 }
 
+import type { ImportColumnMapping } from "@/lib/imports/types";
+
 const jsonImportSchema = z.object({
   filename: z.string().trim().min(1),
   csv: z.string().min(1),
+  mapping: z.record(z.string(), z.string()).optional(),
 });
 
 async function readImportUpload(req: Request) {
@@ -30,9 +34,20 @@ async function readImportUpload(req: Request) {
       badRequest("Multipart import requires a file field");
     }
 
+    let mapping: ImportColumnMapping | undefined;
+    const mappingField = form.get("mapping");
+    if (typeof mappingField === "string" && mappingField.trim()) {
+      try {
+        mapping = JSON.parse(mappingField) as ImportColumnMapping;
+      } catch {
+        badRequest("Invalid column mapping JSON");
+      }
+    }
+
     return {
       filename: file.name,
       csv: await file.text(),
+      mapping,
     };
   }
 
@@ -44,7 +59,9 @@ export async function GET(_req: Request, context: RouteContext) {
     const actorId = await requireCurrentUserId();
     const { groupId } = await context.params;
     const imports = await listImportSessions(actorId, groupId);
-    return NextResponse.json({ imports });
+    return NextResponse.json({
+      imports: imports.map((session) => serializeImportSession(session)),
+    });
   } catch (error) {
     return handleServiceError(error);
   }
@@ -60,7 +77,10 @@ export async function POST(req: Request, context: RouteContext) {
       ...upload,
     });
 
-    return NextResponse.json({ importSession }, { status: 201 });
+    return NextResponse.json(
+      { importSession: serializeImportSession(importSession) },
+      { status: 201 }
+    );
   } catch (error) {
     return handleServiceError(error);
   }

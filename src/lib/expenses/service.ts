@@ -8,6 +8,7 @@ import {
   isMemberActiveOnDate,
   requireGroupRole,
 } from "@/lib/memberships/rules";
+import { normalizeToGroupBase } from "@/lib/currency/exchange";
 import { calculateSplitAllocations } from "@/lib/expenses/splits";
 import type {
   CreateExpenseInput,
@@ -23,10 +24,6 @@ const expenseInclude = {
 
 function toDecimal(value: number) {
   return new Prisma.Decimal(value.toFixed(2));
-}
-
-function calculateBaseAmount(originalAmount: number, exchangeRate: number) {
-  return Math.round(originalAmount * exchangeRate * 100) / 100;
 }
 
 async function validateExpenseMemberships(
@@ -85,11 +82,14 @@ export async function createExpense(actorId: string, input: CreateExpenseInput) 
     input.participants
   );
 
-  const currency = group.currency;
-  const baseAmount = input.originalAmount;
+  const normalized = normalizeToGroupBase(
+    input.originalAmount,
+    input.originalCurrency,
+    group.currency
+  );
   const allocations = calculateSplitAllocations(
     input.splitType,
-    baseAmount,
+    normalized.baseAmount,
     input.participants
   );
 
@@ -101,10 +101,10 @@ export async function createExpense(actorId: string, input: CreateExpenseInput) 
       description: input.description,
       date: input.date,
       receiptUrl: input.receiptUrl ?? null,
-      originalAmount: toDecimal(input.originalAmount),
-      originalCurrency: currency,
-      exchangeRate: new Prisma.Decimal("1.000000"),
-      baseAmount: toDecimal(baseAmount),
+      originalAmount: toDecimal(normalized.originalAmount),
+      originalCurrency: normalized.originalCurrency,
+      exchangeRate: new Prisma.Decimal(normalized.exchangeRate.toFixed(6)),
+      baseAmount: toDecimal(normalized.baseAmount),
       participants: {
         create: allocations.map((allocation) => ({
           userId: allocation.userId,
@@ -127,7 +127,7 @@ export async function createExpense(actorId: string, input: CreateExpenseInput) 
     action: ACTIVITY_ACTIONS.EXPENSE_CREATED,
     entityType: "Expense",
     entityId: expense.id,
-    metadata: { description: expense.description, baseAmount },
+    metadata: { description: expense.description, baseAmount: normalized.baseAmount },
   });
 
   const payerName = expense.paidBy?.username || expense.paidBy?.email?.split("@")[0] || "Someone";
@@ -162,8 +162,10 @@ export async function updateExpense(
   await requireGroupRole(existing.groupId, actorId, GroupRole.ADMIN);
 
   const nextSplitType = input.splitType ?? existing.splitType;
-  const nextAmount =
+  const nextOriginalAmount =
     input.originalAmount ?? Number(existing.originalAmount.toString());
+  const nextOriginalCurrency =
+    input.originalCurrency ?? existing.originalCurrency;
   const nextDate = input.date ?? existing.date;
   const nextPaidById = input.paidById ?? existing.paidById;
   const nextParticipants =
@@ -183,10 +185,14 @@ export async function updateExpense(
     nextParticipants
   );
 
-  const baseAmount = nextAmount;
+  const normalized = normalizeToGroupBase(
+    nextOriginalAmount,
+    nextOriginalCurrency,
+    group.currency
+  );
   const allocations = calculateSplitAllocations(
     nextSplitType,
-    baseAmount,
+    normalized.baseAmount,
     nextParticipants
   );
 
@@ -201,10 +207,10 @@ export async function updateExpense(
         description: input.description,
         date: nextDate,
         receiptUrl: input.receiptUrl,
-        originalAmount: toDecimal(nextAmount),
-        originalCurrency: group.currency,
-        exchangeRate: new Prisma.Decimal("1.000000"),
-        baseAmount: toDecimal(baseAmount),
+        originalAmount: toDecimal(normalized.originalAmount),
+        originalCurrency: normalized.originalCurrency,
+        exchangeRate: new Prisma.Decimal(normalized.exchangeRate.toFixed(6)),
+        baseAmount: toDecimal(normalized.baseAmount),
         participants: {
           create: allocations.map((allocation) => ({
             userId: allocation.userId,
@@ -226,7 +232,7 @@ export async function updateExpense(
     action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
     entityType: "Expense",
     entityId: expenseId,
-    metadata: { baseAmount },
+    metadata: { baseAmount: normalized.baseAmount },
   });
 
   // Notify other group members of update

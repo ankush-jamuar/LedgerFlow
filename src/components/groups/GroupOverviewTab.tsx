@@ -6,6 +6,7 @@
 
 "use client";
 
+import { useEffect, useRef } from "react";
 import { DollarSign, Users, ArrowLeftRight, TrendingUp } from "lucide-react";
 import { useGroup, useGroupExpenses, useGroupBalances, useGroupMembers } from "@/lib/hooks/use-groups";
 import { KpiCard } from "@/components/ui/KpiCard";
@@ -15,9 +16,16 @@ import { formatMoney } from "@/lib/utils/format-money";
 
 interface GroupOverviewTabProps {
   groupId: string;
+  focusBalances?: boolean;
+  onBalanceFocusHandled?: () => void;
 }
 
-export function GroupOverviewTab({ groupId }: GroupOverviewTabProps) {
+export function GroupOverviewTab({
+  groupId,
+  focusBalances = false,
+  onBalanceFocusHandled,
+}: GroupOverviewTabProps) {
+  const balanceRef = useRef<HTMLDivElement>(null);
   const { data: groupData, isLoading: isGroupLoading } = useGroup(groupId);
   const { data: expensesData, isLoading: isExpensesLoading } = useGroupExpenses(groupId);
   const { data: balancesData, isLoading: isBalancesLoading } = useGroupBalances(groupId);
@@ -29,7 +37,7 @@ export function GroupOverviewTab({ groupId }: GroupOverviewTabProps) {
   const currency = groupData?.group?.currency ?? "USD";
 
   const totalExpenses = expenses.reduce(
-    (sum, e) => sum + parseFloat(e.originalAmount || "0"),
+    (sum, e) => sum + parseFloat(e.baseAmount || "0"),
     0
   );
   const activeMembers = members.filter((m) => m.isActive);
@@ -38,6 +46,17 @@ export function GroupOverviewTab({ groupId }: GroupOverviewTabProps) {
   ).length;
 
   const isLoading = isGroupLoading || isExpensesLoading || isBalancesLoading || isMembersLoading;
+
+  useEffect(() => {
+    if (!focusBalances || isLoading) return;
+
+    const frame = requestAnimationFrame(() => {
+      balanceRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      onBalanceFocusHandled?.();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [focusBalances, isLoading, onBalanceFocusHandled]);
 
   return (
     <div className="space-y-6">
@@ -70,8 +89,8 @@ export function GroupOverviewTab({ groupId }: GroupOverviewTabProps) {
       </div>
 
       {/* Balance Explorer */}
-      <div id="balance-overview">
-        <GroupBalanceExplorer groupId={groupId} />
+      <div id="balance-overview" ref={balanceRef}>
+        <GroupBalanceExplorer groupId={groupId} highlighted={focusBalances && !isLoading} />
       </div>
 
       {/* Membership Timeline */}

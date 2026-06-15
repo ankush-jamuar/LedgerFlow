@@ -51,3 +51,6 @@ export function parseCurrencyString(value: string): number {
   const cleaned = value.replace(/[^0-9.-]/g, "");
   return parseFloat(cleaned);
 }
+
+/** Client-safe currency codes for assignment scope (mirrors exchange.ts). */
+export const ASSIGNMENT_CURRENCIES = ["INR", "USD", "EUR", "GBP"] as const;

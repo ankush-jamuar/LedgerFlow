@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { convertAmount } from "@/lib/currency/exchange";
 import {
   calculateAccessibleOutstandingBalance,
   decimalToNumber,
@@ -6,6 +7,8 @@ import {
   roundMoney,
 } from "@/lib/dashboard/analytics";
 import type { DashboardOverview } from "@/lib/dashboard/types";
+
+const OVERVIEW_BASE_CURRENCY = "INR";
 
 export async function getDashboardOverview(
   actorId: string
@@ -33,6 +36,7 @@ export async function getDashboardOverview(
       select: {
         baseAmount: true,
         originalCurrency: true,
+        group: { select: { currency: true } },
       },
     }),
     prisma.settlement.findMany({
@@ -40,6 +44,7 @@ export async function getDashboardOverview(
       select: {
         baseAmount: true,
         originalCurrency: true,
+        group: { select: { currency: true } },
       },
     }),
     prisma.importSession.count({ where: { groupId: { in: groupIds } } }),
@@ -49,11 +54,23 @@ export async function getDashboardOverview(
   ]);
 
   const totalExpenseAmount = expenses.reduce(
-    (total, expense) => total + decimalToNumber(expense.baseAmount),
+    (total, expense) =>
+      total +
+      convertAmount(
+        decimalToNumber(expense.baseAmount),
+        expense.group.currency,
+        OVERVIEW_BASE_CURRENCY
+      ),
     0
   );
   const totalSettlementAmount = settlements.reduce(
-    (total, settlement) => total + decimalToNumber(settlement.baseAmount),
+    (total, settlement) =>
+      total +
+      convertAmount(
+        decimalToNumber(settlement.baseAmount),
+        settlement.group.currency,
+        OVERVIEW_BASE_CURRENCY
+      ),
     0
   );
   const currenciesUsed = Array.from(
@@ -73,7 +90,8 @@ export async function getDashboardOverview(
     totalAnomalies,
     outstandingBalance: await calculateAccessibleOutstandingBalance(
       actorId,
-      groupIds
+      groupIds,
+      OVERVIEW_BASE_CURRENCY
     ),
     totalAmountTracked: roundMoney(totalExpenseAmount + totalSettlementAmount),
     currenciesUsed,

@@ -4,6 +4,7 @@ import { badRequest, notFound } from "@/lib/api/http";
 import { prisma } from "@/lib/db/prisma";
 import { createDbNotification } from "@/lib/notifications/service";
 import { assertGroupIsOpen } from "@/lib/groups/service";
+import { normalizeToGroupBase } from "@/lib/currency/exchange";
 import { requireActiveMembership, requireGroupRole } from "@/lib/memberships/rules";
 import type {
   CreateSettlementInput,
@@ -20,8 +21,8 @@ function toMoneyDecimal(value: number) {
   return new Prisma.Decimal(value.toFixed(2));
 }
 
-function calculateBaseAmount(originalAmount: number, exchangeRate: number) {
-  return Math.round(originalAmount * exchangeRate * 100) / 100;
+function toRateDecimal(value: number) {
+  return new Prisma.Decimal(value.toFixed(6));
 }
 
 async function validateSettlementMembers(
@@ -65,8 +66,11 @@ export async function createSettlement(
   await requireGroupRole(input.groupId, actorId, GroupRole.MEMBER);
   await validateSettlementMembers(input.groupId, input.payerId, input.receiverId);
 
-  const currency = group.currency;
-  const baseAmount = input.originalAmount;
+  const normalized = normalizeToGroupBase(
+    input.originalAmount,
+    input.originalCurrency,
+    group.currency
+  );
 
   const settlement = await prisma.settlement.create({
     data: {
@@ -75,10 +79,10 @@ export async function createSettlement(
       receiverId: input.receiverId,
       note: input.note ?? null,
       settledAt: input.settledAt,
-      originalAmount: toMoneyDecimal(input.originalAmount),
-      originalCurrency: currency,
-      exchangeRate: new Prisma.Decimal("1.000000"),
-      baseAmount: toMoneyDecimal(baseAmount),
+      originalAmount: toMoneyDecimal(normalized.originalAmount),
+      originalCurrency: normalized.originalCurrency,
+      exchangeRate: toRateDecimal(normalized.exchangeRate),
+      baseAmount: toMoneyDecimal(normalized.baseAmount),
     },
     include: settlementInclude,
   });
@@ -92,7 +96,7 @@ export async function createSettlement(
     metadata: {
       payerId: input.payerId,
       receiverId: input.receiverId,
-      baseAmount,
+      baseAmount: normalized.baseAmount,
     },
   });
 
@@ -132,17 +136,23 @@ export async function updateSettlement(
 
   const originalAmount =
     input.originalAmount ?? Number(existing.originalAmount.toString());
-  const baseAmount = originalAmount;
+  const originalCurrency =
+    input.originalCurrency ?? existing.originalCurrency;
+  const normalized = normalizeToGroupBase(
+    originalAmount,
+    originalCurrency,
+    group.currency
+  );
 
   const settlement = await prisma.settlement.update({
     where: { id: settlementId },
     data: {
       note: input.note,
       settledAt: input.settledAt,
-      originalAmount: toMoneyDecimal(originalAmount),
-      originalCurrency: group.currency,
-      exchangeRate: new Prisma.Decimal("1.000000"),
-      baseAmount: toMoneyDecimal(baseAmount),
+      originalAmount: toMoneyDecimal(normalized.originalAmount),
+      originalCurrency: normalized.originalCurrency,
+      exchangeRate: toRateDecimal(normalized.exchangeRate),
+      baseAmount: toMoneyDecimal(normalized.baseAmount),
     },
     include: settlementInclude,
   });
@@ -153,7 +163,7 @@ export async function updateSettlement(
     action: ACTIVITY_ACTIONS.SETTLEMENT_UPDATED,
     entityType: "Settlement",
     entityId: settlementId,
-    metadata: { baseAmount },
+    metadata: { baseAmount: normalized.baseAmount },
   });
 
   return settlement;

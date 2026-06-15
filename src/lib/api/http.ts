@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { UnsupportedCurrencyError } from "@/lib/currency/exchange";
 import { getCurrentLocalUser } from "@/lib/users/current-user";
 
 export class ServiceError extends Error {
@@ -58,6 +59,13 @@ export function handleServiceError(error: unknown) {
     return NextResponse.json(
       { error: error.message, code: error.code },
       { status: error.status }
+    );
+  }
+
+  if (error instanceof UnsupportedCurrencyError) {
+    return NextResponse.json(
+      { error: error.message, code: "BAD_REQUEST" },
+      { status: 400 }
     );
   }
 

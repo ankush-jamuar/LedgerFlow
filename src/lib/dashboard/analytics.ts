@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { calculateGroupBalances } from "@/lib/balances";
+import { convertAmount } from "@/lib/currency/exchange";
 import type {
   DashboardExpenseAnalytics,
   DashboardExpenseSummary,
@@ -58,16 +59,30 @@ function expenseSummary(expense: {
 
 export async function calculateAccessibleOutstandingBalance(
   actorId: string,
-  groupIds: string[]
+  groupIds: string[],
+  targetCurrency = "INR"
 ): Promise<number> {
   let outstanding = 0;
+
+  const groups = await prisma.group.findMany({
+    where: { id: { in: groupIds } },
+    select: { id: true, currency: true },
+  });
+  const groupCurrencyById = new Map(
+    groups.map((group) => [group.id, group.currency])
+  );
 
   for (const groupId of groupIds) {
     try {
       const balances = await calculateGroupBalances(actorId, groupId);
       const member = balances.members.find((m) => m.userId === actorId);
       if (member) {
-        outstanding += member.netBalance;
+        const groupCurrency = groupCurrencyById.get(groupId) ?? targetCurrency;
+        outstanding += convertAmount(
+          member.netBalance,
+          groupCurrency,
+          targetCurrency
+        );
       }
     } catch (error) {
       console.error(`Failed to calculate balance for group ${groupId}`, error);
@@ -92,8 +107,7 @@ export async function getGroupAnalytics(
   });
 
   const totalMembers = groups.reduce(
-    (total: number, group: any) =>
-      total + group._count.memberships,
+    (total, group) => total + group._count.memberships,
     0
   );
   const largestGroup =

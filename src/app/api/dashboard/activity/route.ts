@@ -5,6 +5,10 @@ import {
 } from "@/lib/dashboard";
 import { handleServiceError, requireCurrentUserId } from "@/lib/api/http";
 
+type DashboardActivityLog = Awaited<
+  ReturnType<typeof getRecentDashboardActivity>
+>[number];
+
 export async function GET(req: Request) {
   try {
     const actorId = await requireCurrentUserId();
@@ -14,7 +18,7 @@ export async function GET(req: Request) {
     });
     const activity = await getRecentDashboardActivity(actorId, query.limit);
 
-    const activities = activity.map((log: any) => ({
+    const activities = activity.map((log: DashboardActivityLog) => ({
       id: log.id,
       action: log.action,
       actorId: log.actorId,
