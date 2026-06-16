@@ -231,7 +231,9 @@ export interface ImportSessionResponse {
   importedRows?: number;
   rejectedRows?: number;
   anomalyCount?: number;
+  uploadedBy?: GroupMemberUser;
 }
+
 
 export interface NotificationResponse {
   id: string;
@@ -254,6 +256,17 @@ export interface TimelineEventResponse {
   user?: GroupMemberUser;
 }
 
+export interface MessageResponse {
+  id: string;
+  groupId: string;
+  senderId: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sender?: GroupMemberUser;
+}
+
 export interface ActivityItem {
   id: string;
   action: string;
@@ -271,17 +284,19 @@ export interface ActivityItem {
 export const api = {
   // ── Dashboard ──────────────────────────────────────────
   dashboard: {
-    overview: () =>
-      apiFetch<DashboardOverview>("/api/dashboard/overview"),
+    overview: (currency = "INR") =>
+      apiFetch<DashboardOverview>(`/api/dashboard/overview?currency=${currency}`),
 
     activity: () =>
+
       apiFetch<{ activities: ActivityItem[] }>("/api/dashboard/activity"),
 
     anomalies: () =>
       apiFetch<DashboardAnomalyOverview>("/api/dashboard/anomalies"),
 
-    reports: () =>
-      apiFetch<DashboardReports>("/api/dashboard/reports"),
+    reports: (currency = "INR") =>
+      apiFetch<DashboardReports>(`/api/dashboard/reports?currency=${currency}`),
+
 
     groups: () =>
       apiFetch<unknown>("/api/dashboard/groups"),
@@ -298,8 +313,8 @@ export const api = {
 
   // ── Groups ─────────────────────────────────────────────
   groups: {
-    list: () =>
-      apiFetch<{ groups: GroupResponse[] }>("/api/groups"),
+    list: (includeArchived = false) =>
+      apiFetch<{ groups: GroupResponse[] }>(`/api/groups?includeArchived=${includeArchived}`),
 
     get: (groupId: string) =>
       apiFetch<{ group: GroupResponse }>(`/api/groups/${groupId}`),
@@ -310,7 +325,7 @@ export const api = {
         body: JSON.stringify(data),
       }),
 
-    update: (groupId: string, data: { name?: string; description?: string }) =>
+    update: (groupId: string, data: { name?: string; description?: string; currency?: string }) =>
       apiFetch<{ group: GroupResponse }>(`/api/groups/${groupId}`, {
         method: "PATCH",
         body: JSON.stringify(data),
@@ -318,6 +333,16 @@ export const api = {
 
     archive: (groupId: string) =>
       apiFetch<{ group: GroupResponse }>(`/api/groups/${groupId}`, {
+        method: "DELETE",
+      }),
+
+    restore: (groupId: string) =>
+      apiFetch<{ group: GroupResponse }>(`/api/groups/${groupId}/restore`, {
+        method: "POST",
+      }),
+
+    deletePermanent: (groupId: string) =>
+      apiFetch<{ success: boolean }>(`/api/groups/${groupId}/permanent-delete`, {
         method: "DELETE",
       }),
 
@@ -367,7 +392,17 @@ export const api = {
 
     imports: (groupId: string) =>
       apiFetch<{ imports: ImportSessionResponse[] }>(`/api/groups/${groupId}/imports`),
+
+    messages: (groupId: string) =>
+      apiFetch<{ messages: MessageResponse[] }>(`/api/groups/${groupId}/messages`),
+
+    sendMessage: (groupId: string, body: string) =>
+      apiFetch<{ message: MessageResponse }>(`/api/groups/${groupId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ body }),
+      }),
   },
+
 
   // ── Expenses ───────────────────────────────────────────
   expenses: {
@@ -397,12 +432,15 @@ export const api = {
     get: (importSessionId: string) =>
       apiFetch<{ importSession: ImportSessionResponse }>(`/api/imports/${importSessionId}`),
 
-    upload: (groupId: string, file: File, mapping?: Record<string, string>) => {
+    upload: (groupId: string, file: File, mapping?: Record<string, string>, strictMode?: boolean) => {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("groupId", groupId);
       if (mapping) {
         formData.append("mapping", JSON.stringify(mapping));
+      }
+      if (strictMode !== undefined) {
+        formData.append("strictMode", String(strictMode));
       }
       return apiFetch<{ importSession: ImportSessionResponse }>(`/api/groups/${groupId}/imports`, {
         method: "POST",

@@ -30,6 +30,7 @@ import { GroupOverviewTab } from "@/components/groups/GroupOverviewTab";
 import { GroupExpensesTab } from "@/components/groups/GroupExpensesTab";
 import { GroupSettlementsTab } from "@/components/groups/GroupSettlementsTab";
 import { GroupMembersTab } from "@/components/groups/GroupMembersTab";
+import { GroupSettingsTab } from "@/components/groups/GroupSettingsTab";
 import { AddMemberModal } from "@/components/groups/AddMemberModal";
 import { CreateExpenseModal } from "@/components/expenses/CreateExpenseModal";
 import { RecordSettlementModal } from "@/components/settlements/RecordSettlementModal";
@@ -39,13 +40,14 @@ interface GroupDetailClientProps {
   groupId: string;
 }
 
-type TabId = "overview" | "expenses" | "settlements" | "members";
+type TabId = "overview" | "expenses" | "settlements" | "members" | "settings";
 
 const TABS = [
   { id: "overview" as const, label: "Overview", icon: <Scale className="h-3.5 w-3.5" /> },
   { id: "expenses" as const, label: "Expenses", icon: <Receipt className="h-3.5 w-3.5" /> },
   { id: "settlements" as const, label: "Settlements", icon: <ArrowLeftRight className="h-3.5 w-3.5" /> },
   { id: "members" as const, label: "Members", icon: <Users className="h-3.5 w-3.5" /> },
+  { id: "settings" as const, label: "Settings", icon: <Globe className="h-3.5 w-3.5" /> },
 ];
 
 const QUICK_ACTIONS = [
@@ -220,7 +222,6 @@ export function GroupDetailClient({ groupId }: GroupDetailClientProps) {
         onTabChange={(id) => setActiveTab(id as TabId)}
         variant="pill"
       />
-
       {/* Tab Content */}
       <div className="min-h-[300px]">
         {activeTab === "overview" && (
@@ -238,6 +239,7 @@ export function GroupDetailClient({ groupId }: GroupDetailClientProps) {
             onAddMember={() => setShowAddMember(true)}
           />
         )}
+        {activeTab === "settings" && <GroupSettingsTab groupId={groupId} />}
       </div>
 
       {/* Modals */}

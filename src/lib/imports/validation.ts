@@ -274,7 +274,8 @@ function makeConflictSignature(row: ValidImportExpense) {
 export async function validateImportRows(
   groupId: string,
   rows: ParsedImportRow[],
-  groupDefaultCurrency = "INR"
+  groupDefaultCurrency = "INR",
+  strictMode = false
 ): Promise<ImportValidationResult> {
   const memberships = await prisma.groupMember.findMany({
     where: { groupId },
@@ -415,7 +416,7 @@ export async function validateImportRows(
       continue;
     }
 
-    if (!isMemberActiveOnDate(payer, date)) {
+    if (strictMode && !isMemberActiveOnDate(payer, date)) {
       addAnomaly(
         rowAnomalies,
         row,
@@ -446,7 +447,7 @@ export async function validateImportRows(
 
     for (const participant of participants) {
       const membership = memberships.find((item) => item.userId === participant.userId);
-      if (membership && !isMemberActiveOnDate(membership, date)) {
+      if (strictMode && membership && !isMemberActiveOnDate(membership, date)) {
         addAnomaly(
           rowAnomalies,
           row,

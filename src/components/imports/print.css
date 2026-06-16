@@ -1,0 +1,102 @@
+@media print {
+  /* Hide headers, sidebar navigation, topbar action links, breadcrumbs, scrollbars and action buttons */
+  header,
+  footer,
+  aside,
+  nav,
+  button,
+  .no-print,
+  #topbar-notifications,
+  #topbar-search,
+  #topbar-theme-toggle,
+  a[href^="/"] {
+    display: none !important;
+  }
+
+  /* Reset main layouts, backgrounds and heights to fit clean page flow */
+  body,
+  main,
+  html,
+  div {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    border-color: #ddd !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Force display of hidden containers, nested lists, and full table contents */
+  .max-h-\[600px\],
+  .overflow-y-auto {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Clean typography adjustments */
+  h1 {
+    font-size: 24pt !important;
+    margin-bottom: 15px !important;
+    color: #111 !important;
+  }
+
+  h2 {
+    font-size: 18pt !important;
+    margin-top: 20px !important;
+    margin-bottom: 10px !important;
+    color: #222 !important;
+  }
+
+  h3 {
+    font-size: 14pt !important;
+    margin-top: 15px !important;
+    margin-bottom: 8px !important;
+    color: #333 !important;
+  }
+
+  /* Page break rules for professional layout */
+  .page-break {
+    page-break-before: always;
+  }
+
+  /* Professional brand layout header at top of print page */
+  .print-brand-header {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #7c3aed;
+    padding-bottom: 12px;
+    margin-bottom: 25px;
+  }
+
+  .print-brand-title {
+    font-size: 22pt;
+    font-weight: 800;
+    color: #7c3aed;
+  }
+
+  .print-brand-tagline {
+    font-size: 9pt;
+    color: #666;
+    text-align: right;
+  }
+
+  .print-footer {
+    display: block !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-top: 1px solid #ddd;
+    padding-top: 8px;
+    font-size: 8pt;
+    color: #777;
+    text-align: center;
+  }
+}
+
+/* Hidden by default in desktop UI, only rendered in print/PDF views */
+.print-brand-header,
+.print-footer {
+  display: none;
+}

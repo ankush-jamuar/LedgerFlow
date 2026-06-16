@@ -38,11 +38,35 @@ function getActivityMeta(action: string) {
         colorClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
         message: "created the group",
       };
+    case "GROUP_UPDATED":
+      return {
+        icon: PlusCircle,
+        colorClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+        message: "updated the group details",
+      };
+    case "GROUP_ARCHIVED":
+      return {
+        icon: AlertTriangle,
+        colorClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+        message: "archived the group",
+      };
     case "MEMBER_ADDED":
       return {
         icon: UserPlus,
         colorClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-        message: "added a member",
+        message: "added member",
+      };
+    case "MEMBER_REMOVED":
+      return {
+        icon: UserPlus,
+        colorClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+        message: "removed member",
+      };
+    case "ROLE_CHANGED":
+      return {
+        icon: UserPlus,
+        colorClass: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+        message: "changed role",
       };
     case "EXPENSE_CREATED":
       return {
@@ -50,11 +74,29 @@ function getActivityMeta(action: string) {
         colorClass: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
         message: "added expense",
       };
+    case "EXPENSE_UPDATED":
+      return {
+        icon: Receipt,
+        colorClass: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+        message: "edited expense",
+      };
+    case "EXPENSE_DELETED":
+      return {
+        icon: Receipt,
+        colorClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+        message: "deleted expense",
+      };
     case "SETTLEMENT_CREATED":
       return {
         icon: Handshake,
         colorClass: "bg-teal-500/10 text-teal-400 border-teal-500/20",
         message: "recorded a payment",
+      };
+    case "SETTLEMENT_UPDATED":
+      return {
+        icon: Handshake,
+        colorClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+        message: "updated payment details",
       };
     case "IMPORT_STARTED":
       return {
@@ -68,11 +110,29 @@ function getActivityMeta(action: string) {
         colorClass: "bg-green-500/10 text-green-400 border-green-500/20",
         message: "completed CSV import",
       };
+    case "IMPORT_FAILED":
+      return {
+        icon: AlertTriangle,
+        colorClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+        message: "CSV import failed",
+      };
     case "ANOMALY_CREATED":
       return {
         icon: AlertTriangle,
         colorClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
         message: "detected an anomaly",
+      };
+    case "REPORT_GENERATED":
+      return {
+        icon: FileCheck,
+        colorClass: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+        message: "generated import report",
+      };
+    case "GROUP_RESTORED":
+      return {
+        icon: PlusCircle,
+        colorClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+        message: "restored the group from archives",
       };
     default:
       return {
@@ -80,6 +140,7 @@ function getActivityMeta(action: string) {
         colorClass: "bg-gray-500/10 text-gray-400 border-gray-500/20",
         message: "performed an action",
       };
+
   }
 }
 

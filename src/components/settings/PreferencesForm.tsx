@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react";
 import { Bell, Check, Palette, Save } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useQueryClient } from "@tanstack/react-query";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
+
 
 interface PreferencesFormProps {
   initialTheme: string;
@@ -27,6 +29,8 @@ export function PreferencesForm({
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [isPending, startTransition] = useTransition();
 
+  const queryClient = useQueryClient();
+
   function savePreferences() {
     setStatus("idle");
 
@@ -46,10 +50,13 @@ export function PreferencesForm({
         return;
       }
 
+      await queryClient.invalidateQueries({ queryKey: ["user", "preferences"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       setTheme(theme);
       setStatus("saved");
     });
   }
+
 
   return (
     <div className="glass rounded-xl p-5">

@@ -57,13 +57,14 @@ export function KpiRow({
   const cards = [
     {
       label: "Total Tracked",
-      value: formatMoneyCompact(overview.totalAmountTracked, baseCurrency),
+      value: formatMoneyCompact(overview.totalAmountTracked, currencyPreference),
       icon: Coins,
       subValue: `Across all periods`,
     },
     {
       label: "Net Outstanding",
-      value: formatMoneyCompact(overview.outstandingBalance, baseCurrency),
+      value: formatMoneyCompact(overview.outstandingBalance, currencyPreference),
+
       icon: Scale,
       trend: overview.outstandingBalance > 0 ? ("up" as const) : overview.outstandingBalance < 0 ? ("down" as const) : ("neutral" as const),
       positiveIsGood: true,

@@ -30,7 +30,7 @@ export async function invalidateGroupFinancialCaches(
     refetchType: "active",
   });
   void queryClient.invalidateQueries({
-    queryKey: GROUP_QUERY_KEYS.list,
+    queryKey: ["groups"],
     refetchType: "active",
   });
   void queryClient.invalidateQueries({

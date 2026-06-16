@@ -13,7 +13,7 @@ export class UnsupportedCurrencyError extends Error {
   }
 }
 
-export const ASSIGNMENT_CURRENCIES = ["INR", "USD", "EUR", "GBP"] as const;
+export const ASSIGNMENT_CURRENCIES = ["INR", "USD", "EUR", "GBP", "AUD", "CAD", "SGD", "AED", "JPY"] as const;
 
 export type AssignmentCurrency = (typeof ASSIGNMENT_CURRENCIES)[number];
 
@@ -23,7 +23,13 @@ const TO_INR: Record<AssignmentCurrency, number> = {
   USD: 85,
   EUR: 92,
   GBP: 107,
+  AUD: 56,
+  CAD: 62,
+  SGD: 63,
+  AED: 23,
+  JPY: 0.54,
 };
+
 
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;

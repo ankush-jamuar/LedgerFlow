@@ -33,8 +33,8 @@ export function useGroupImports(groupId: string) {
 export function useUploadImport(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ file, mapping }: { file: File; mapping?: Record<string, string> }) =>
-      api.imports.upload(groupId, file, mapping),
+    mutationFn: ({ file, mapping, strictMode }: { file: File; mapping?: Record<string, string>; strictMode?: boolean }) =>
+      api.imports.upload(groupId, file, mapping, strictMode),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: IMPORT_QUERY_KEYS.groupList(groupId) });
       void queryClient.invalidateQueries({ queryKey: ["groups", groupId, "expenses"] });

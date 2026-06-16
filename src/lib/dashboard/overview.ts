@@ -11,7 +11,8 @@ import type { DashboardOverview } from "@/lib/dashboard/types";
 const OVERVIEW_BASE_CURRENCY = "INR";
 
 export async function getDashboardOverview(
-  actorId: string
+  actorId: string,
+  targetCurrency = "INR"
 ): Promise<DashboardOverview> {
   const groupIds = await getAccessibleGroupIds(actorId);
   const [
@@ -59,7 +60,7 @@ export async function getDashboardOverview(
       convertAmount(
         decimalToNumber(expense.baseAmount),
         expense.group.currency,
-        OVERVIEW_BASE_CURRENCY
+        targetCurrency
       ),
     0
   );
@@ -69,7 +70,7 @@ export async function getDashboardOverview(
       convertAmount(
         decimalToNumber(settlement.baseAmount),
         settlement.group.currency,
-        OVERVIEW_BASE_CURRENCY
+        targetCurrency
       ),
     0
   );
@@ -91,10 +92,11 @@ export async function getDashboardOverview(
     outstandingBalance: await calculateAccessibleOutstandingBalance(
       actorId,
       groupIds,
-      OVERVIEW_BASE_CURRENCY
+      targetCurrency
     ),
     totalAmountTracked: roundMoney(totalExpenseAmount + totalSettlementAmount),
     currenciesUsed,
     generatedAt: new Date().toISOString(),
   };
 }
+

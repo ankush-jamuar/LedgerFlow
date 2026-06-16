@@ -8,7 +8,7 @@
 
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api/client";
+import { api, type NotificationResponse } from "@/lib/api/client";
 
 export interface NotificationItem {
   id: string;
@@ -28,11 +28,12 @@ export const NOTIFICATION_QUERY_KEYS = {
 export function useUserNotifications() {
   const queryClient = useQueryClient();
 
-  // Load real DB notifications
+  // Load real DB notifications with auto-refresh polling every 3 seconds
   const { data, isLoading, refetch } = useQuery({
     queryKey: NOTIFICATION_QUERY_KEYS.all,
     queryFn: () => api.notifications.list(),
-    staleTime: 10 * 1000, // cache for 10 seconds
+    staleTime: 3 * 1000,
+    refetchInterval: 3000,
   });
 
   const dbNotifications = useMemo(() => data?.notifications ?? [], [data?.notifications]);
@@ -70,14 +71,48 @@ export function useUserNotifications() {
   // Mutations
   const readMutation = useMutation({
     mutationFn: (id: string) => api.notifications.read(id),
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: NOTIFICATION_QUERY_KEYS.all });
+      const previousData = queryClient.getQueryData<{ notifications: NotificationResponse[] }>(NOTIFICATION_QUERY_KEYS.all);
+      if (previousData) {
+        queryClient.setQueryData(NOTIFICATION_QUERY_KEYS.all, {
+          ...previousData,
+          notifications: previousData.notifications.map((n) =>
+            n.id === id ? { ...n, isRead: true } : n
+          ),
+        });
+      }
+      return { previousData };
+    },
+    onError: (err, id, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(NOTIFICATION_QUERY_KEYS.all, context.previousData);
+      }
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.all });
     },
   });
 
   const readAllMutation = useMutation({
     mutationFn: () => api.notifications.readAll(),
-    onSuccess: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: NOTIFICATION_QUERY_KEYS.all });
+      const previousData = queryClient.getQueryData<{ notifications: NotificationResponse[] }>(NOTIFICATION_QUERY_KEYS.all);
+      if (previousData) {
+        queryClient.setQueryData(NOTIFICATION_QUERY_KEYS.all, {
+          ...previousData,
+          notifications: previousData.notifications.map((n) => ({ ...n, isRead: true })),
+        });
+      }
+      return { previousData };
+    },
+    onError: (err, _, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(NOTIFICATION_QUERY_KEYS.all, context.previousData);
+      }
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.all });
     },
   });

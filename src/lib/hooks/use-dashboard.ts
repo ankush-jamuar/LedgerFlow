@@ -12,17 +12,17 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 
 export const DASHBOARD_QUERY_KEYS = {
-  overview: ["dashboard", "overview"] as const,
+  overview: (currency?: string) => ["dashboard", "overview", currency] as const,
   activity: (limit?: number) => ["dashboard", "activity", limit] as const,
   anomalies: ["dashboard", "anomalies"] as const,
-  reports: ["dashboard", "reports"] as const,
+  reports: (currency?: string) => ["dashboard", "reports", currency] as const,
 } as const;
 
 /** Core KPI metrics — groups, expenses, settlements, balance totals */
-export function useDashboardOverview() {
+export function useDashboardOverview(targetCurrency = "INR") {
   return useQuery({
-    queryKey: DASHBOARD_QUERY_KEYS.overview,
-    queryFn: () => api.dashboard.overview(),
+    queryKey: DASHBOARD_QUERY_KEYS.overview(targetCurrency),
+    queryFn: () => api.dashboard.overview(targetCurrency),
     staleTime: 30 * 1000, // 30 seconds — financial data should stay fresh
   });
 }
@@ -32,7 +32,8 @@ export function useDashboardActivity(limit = 20) {
   return useQuery({
     queryKey: DASHBOARD_QUERY_KEYS.activity(limit),
     queryFn: () => api.dashboard.activity(),
-    staleTime: 60 * 1000,
+    staleTime: 5 * 1000,
+    refetchInterval: 3000,
   });
 }
 
@@ -46,10 +47,11 @@ export function useDashboardAnomalies() {
 }
 
 /** Financial reports: monthly spending, top payers, currency breakdown */
-export function useDashboardReports() {
+export function useDashboardReports(targetCurrency = "INR") {
   return useQuery({
-    queryKey: DASHBOARD_QUERY_KEYS.reports,
-    queryFn: () => api.dashboard.reports(),
+    queryKey: DASHBOARD_QUERY_KEYS.reports(targetCurrency),
+    queryFn: () => api.dashboard.reports(targetCurrency),
     staleTime: 5 * 60 * 1000, // Reports can be cached longer
   });
 }
+

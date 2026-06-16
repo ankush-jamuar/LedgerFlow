@@ -130,7 +130,19 @@ export async function createExpense(actorId: string, input: CreateExpenseInput) 
     metadata: { description: expense.description, baseAmount: normalized.baseAmount },
   });
 
+  // Post system message to group chat
   const payerName = expense.paidBy?.username || expense.paidBy?.email?.split("@")[0] || "Someone";
+  try {
+    await prisma.message.create({
+      data: {
+        groupId: input.groupId,
+        senderId: actorId,
+        body: `💰 ${payerName} added expense: "${expense.description}" of ${expense.originalCurrency} ${expense.originalAmount}`,
+      },
+    });
+  } catch (chatErr) {
+    console.error("Failed to post system chat message for expense creation", chatErr);
+  }
   const otherMembers = await prisma.groupMember.findMany({
     where: {
       groupId: input.groupId,

@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 
 export const GROUP_QUERY_KEYS = {
-  list: ["groups"] as const,
+  list: (includeArchived = false) => ["groups", { includeArchived }] as const,
   detail: (groupId: string) => ["groups", groupId] as const,
   members: (groupId: string) => ["groups", groupId, "members"] as const,
   expenses: (groupId: string) => ["groups", groupId, "expenses"] as const,
@@ -17,10 +17,10 @@ export const GROUP_QUERY_KEYS = {
   timeline: (groupId: string) => ["groups", groupId, "timeline"] as const,
 } as const;
 
-export function useGroups() {
+export function useGroups(includeArchived = false) {
   return useQuery({
-    queryKey: GROUP_QUERY_KEYS.list,
-    queryFn: () => api.groups.list(),
+    queryKey: GROUP_QUERY_KEYS.list(includeArchived),
+    queryFn: () => api.groups.list(includeArchived),
     staleTime: 30 * 1000,
   });
 }
@@ -84,7 +84,7 @@ export function useCreateGroup() {
   return useMutation({
     mutationFn: api.groups.create,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list });
+      void queryClient.invalidateQueries({ queryKey: ["groups"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
@@ -94,11 +94,11 @@ export function useCreateGroup() {
 export function useUpdateGroup(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name?: string; description?: string }) =>
+    mutationFn: (data: { name?: string; description?: string; currency?: string }) =>
       api.groups.update(groupId, data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.detail(groupId) });
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list });
+      void queryClient.invalidateQueries({ queryKey: ["groups"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
@@ -109,8 +109,38 @@ export function useArchiveGroup() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (groupId: string) => api.groups.archive(groupId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list });
+    onSuccess: (_, groupId) => {
+      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list(false) });
+      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list(true) });
+      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.detail(groupId) });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
+export function useRestoreGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (groupId: string) => api.groups.restore(groupId),
+    onSuccess: (_, groupId) => {
+      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list(false) });
+      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list(true) });
+      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.detail(groupId) });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
+export function useDeleteGroupPermanent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (groupId: string) => api.groups.deletePermanent(groupId),
+    onSuccess: (_, groupId) => {
+      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list(false) });
+      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.list(true) });
+      void queryClient.invalidateQueries({ queryKey: GROUP_QUERY_KEYS.detail(groupId) });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },

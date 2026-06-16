@@ -44,14 +44,24 @@ async function readImportUpload(req: Request) {
       }
     }
 
+    const strictModeField = form.get("strictMode");
+    const strictMode = strictModeField === "true";
+
     return {
       filename: file.name,
       csv: await file.text(),
       mapping,
+      strictMode,
     };
   }
 
-  return jsonImportSchema.parse(await readJsonObject(req));
+  const jsonBody = await readJsonObject(req) as Record<string, unknown>;
+  const parsed = jsonImportSchema.parse(jsonBody);
+  const strictMode = jsonBody.strictMode === true;
+  return {
+    ...parsed,
+    strictMode,
+  };
 }
 
 export async function GET(_req: Request, context: RouteContext) {

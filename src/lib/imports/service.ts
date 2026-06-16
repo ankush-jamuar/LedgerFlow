@@ -117,14 +117,15 @@ export async function createImportSession(
       },
     });
 
-    const validation = await validateImportRows(input.groupId, rows, group.currency);
+    const validation = await validateImportRows(input.groupId, rows, group.currency, input.strictMode ?? false);
     const createdExpenseIds: string[] = [];
 
-    // === CORE TRANSACTION: Only financial writes ===
-    // Keep minimal: expenses, anomalies, session status update
-    // Activity logs are OUTSIDE to prevent P2028 timeouts
+    // === CORE TRANSACTION: Optimized with batch creation ===
     const completed = await prisma.$transaction(
       async (tx) => {
+        // Step 1: Create all expenses individually because we need their generated IDs for participants,
+        // but avoid any other sub-queries.
+        const createdExpenses = [];
         for (const row of validation.validRows) {
           const normalized = normalizeToGroupBase(
             row.amount,
@@ -148,31 +149,60 @@ export async function createImportSession(
                 rawCsvRow: row.raw,
                 paidByRaw: row.paidByRaw,
               },
-              participants: {
-                create: participantCreateData(row, normalized.baseAmount),
-              },
             },
           });
           createdExpenseIds.push(expense.id);
+          createdExpenses.push({ expense, row, normalized });
         }
 
-        // Create anomaly records only (no activity logs inside tx)
-        const anomalyIds: string[] = [];
-        for (const anomaly of validation.anomalies) {
-          const created = await tx.anomaly.create({
-            data: {
-              importSessionId: session.id,
-              expenseId: anomaly.existingExpenseId ?? null,
-              type: anomaly.type,
-              severity: anomaly.severity,
-              payload: {
-                rowNumber: anomaly.rowNumber,
-                message: anomaly.message,
-                ...anomaly.payload,
-              } as Prisma.InputJsonObject,
-            },
+        // Step 2: Bulk insert participants for all expenses using createMany
+        const participantsData: Prisma.ExpenseParticipantCreateManyInput[] = [];
+        for (const item of createdExpenses) {
+          const allocations = calculateSplitAllocations(
+            item.row.splitType,
+            item.normalized.baseAmount,
+            item.row.participants
+          );
+
+          allocations.forEach((allocation) => {
+            participantsData.push({
+              expenseId: item.expense.id,
+              userId: allocation.userId,
+              splitValue:
+                allocation.rawSplitValue === null
+                  ? null
+                  : toMoneyDecimal(allocation.rawSplitValue),
+              metadata: {
+                calculatedOwedAmount: allocation.owedAmount,
+                importRowNumber: item.row.rowNumber,
+              },
+            });
           });
-          anomalyIds.push(created.id);
+        }
+
+        if (participantsData.length > 0) {
+          await tx.expenseParticipant.createMany({
+            data: participantsData,
+          });
+        }
+
+        // Step 3: Bulk insert anomalies using createMany
+        if (validation.anomalies.length > 0) {
+          const anomaliesData = validation.anomalies.map((anomaly) => ({
+            importSessionId: session.id,
+            expenseId: anomaly.existingExpenseId ?? null,
+            type: anomaly.type,
+            severity: anomaly.severity,
+            payload: {
+              rowNumber: anomaly.rowNumber,
+              message: anomaly.message,
+              ...anomaly.payload,
+            } as Prisma.InputJsonObject,
+          }));
+
+          await tx.anomaly.createMany({
+            data: anomaliesData,
+          });
         }
 
         const report = generateImportReport({
@@ -199,15 +229,16 @@ export async function createImportSession(
           include: importSessionInclude,
         });
 
-        return { updated, anomalyIds, report, status };
+        return { updated, report, status };
       },
       {
-        timeout: 30000, // 30 seconds — generous timeout for large imports
-        maxWait: 10000, // 10 seconds to acquire connection
+        timeout: 45000, // generouse timeout
+        maxWait: 15000,
       }
     );
 
     const { updated, report, status } = completed;
+
 
     // === POST-TRANSACTION: Activity logs, notifications (non-blocking) ===
     // These run OUTSIDE the transaction — no timeout risk

@@ -27,7 +27,7 @@ const FILTER_TABS = [
 ];
 
 export function GroupsClient() {
-  const { data, isLoading, error, refetch } = useGroups();
+  const { data, isLoading, error, refetch } = useGroups(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("all");
   const [showCreateModal, setShowCreateModal] = useState(false);

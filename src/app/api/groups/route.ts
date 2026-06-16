@@ -10,10 +10,12 @@ import {
   listGroups,
 } from "@/lib/groups";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const actorId = await requireCurrentUserId();
-    const groups = await listGroups(actorId);
+    const { searchParams } = new URL(req.url);
+    const includeArchived = searchParams.get("includeArchived") === "true";
+    const groups = await listGroups(actorId, includeArchived);
     return NextResponse.json({ groups });
   } catch (error) {
     return handleServiceError(error);

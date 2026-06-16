@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { MessageSquare } from "lucide-react";
+import { Suspense } from "react";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { PageTransition } from "@/components/system/PageTransition";
+import { ChatClient } from "@/components/chat/ChatClient";
 
 export const metadata: Metadata = { title: "Chat" };
 
@@ -14,16 +14,15 @@ export default function ChatPage() {
       <PageContainer>
         <DashboardShell>
           <SectionHeader
-            title="Chat"
+            title="Chat Room"
             subtitle="Realtime communication feed with group members"
           />
-          <EmptyState
-            icon={MessageSquare}
-            title="Chat is coming soon"
-            description="Realtime group messaging will be available in an upcoming release. Stay tuned."
-          />
+          <Suspense fallback={<div className="h-96 rounded-xl bg-white/[0.02] border border-white/[0.04] animate-pulse" />}>
+            <ChatClient />
+          </Suspense>
         </DashboardShell>
       </PageContainer>
     </PageTransition>
   );
 }
+

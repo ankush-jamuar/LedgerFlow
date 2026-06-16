@@ -69,13 +69,16 @@ function DashboardSkeleton() {
 }
 
 function DashboardInner() {
+  const { data: prefData } = useUserPreferences();
+  const currency = prefData?.preferences?.currency ?? "INR";
+
   // Queries
   const {
     data: overview,
     isLoading: isOverviewLoading,
     error: overviewError,
     refetch: refetchOverview,
-  } = useDashboardOverview();
+  } = useDashboardOverview(currency);
 
   const {
     data: activityData,
@@ -96,13 +99,11 @@ function DashboardInner() {
     isLoading: isReportsLoading,
     error: reportsError,
     refetch: refetchReports,
-  } = useDashboardReports();
+  } = useDashboardReports(currency);
 
-  const { data: prefData } = useUserPreferences();
 
   const isError =
     overviewError || activityError || anomaliesError || reportsError;
-  const currency = prefData?.preferences?.currency ?? "INR";
 
   const handleRetry = () => {
     refetchOverview();
@@ -110,6 +111,8 @@ function DashboardInner() {
     refetchAnomalies();
     refetchReports();
   };
+
+
 
   if (isError) {
     return (

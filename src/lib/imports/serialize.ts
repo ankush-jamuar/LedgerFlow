@@ -1,5 +1,5 @@
 import { importRowsFromReport } from "@/lib/dashboard/reports";
-import type { ImportSessionResponse } from "@/lib/api/client";
+import type { ImportSessionResponse, GroupMemberUser } from "@/lib/api/client";
 
 type ImportSessionRecord = {
   id: string;
@@ -15,6 +15,7 @@ type ImportSessionRecord = {
   createdAt: Date;
   updatedAt: Date;
   anomalies?: unknown[];
+  uploadedBy?: GroupMemberUser;
 };
 
 export function serializeImportSession(
@@ -44,5 +45,7 @@ export function serializeImportSession(
     rejectedRows: counts.rejectedRows,
     anomalyCount: counts.anomalyCount,
     anomalies: session.anomalies as ImportSessionResponse["anomalies"],
+    uploadedBy: session.uploadedBy,
   };
 }
+

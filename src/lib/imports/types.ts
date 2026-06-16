@@ -5,6 +5,7 @@ export interface ImportUploadInput {
   filename: string;
   csv: string;
   mapping?: ImportColumnMapping;
+  strictMode?: boolean;
 }
 
 export type ImportCanonicalField =

@@ -101,6 +101,18 @@ export async function createSettlement(
   });
 
   const payerName = settlement.payer?.username || settlement.payer?.email?.split("@")[0] || "Someone";
+  const receiverName = settlement.receiver?.username || settlement.receiver?.email?.split("@")[0] || "Someone";
+  try {
+    await prisma.message.create({
+      data: {
+        groupId: input.groupId,
+        senderId: actorId,
+        body: `🤝 Settlement recorded: ${payerName} paid ${receiverName} ${settlement.originalCurrency} ${settlement.originalAmount}`,
+      },
+    });
+  } catch (chatErr) {
+    console.error("Failed to post system chat message for settlement creation", chatErr);
+  }
   const groupName = settlement.group?.name || "Group";
   await createDbNotification({
     userId: input.receiverId,

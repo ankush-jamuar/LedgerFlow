@@ -55,6 +55,7 @@ export function ImportClient() {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [columnSamples, setColumnSamples] = useState<Record<string, string[]>>({});
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [strictMode, setStrictMode] = useState(false);
 
   const isMappingValid = useMemo(() => {
     const requiredKeys = ["date", "description", "amount", "paidBy", "participants", "splitType"];
@@ -188,6 +189,7 @@ export function ImportClient() {
       const response = await uploadMutation.mutateAsync({
         file: selectedFile,
         mapping,
+        strictMode,
       });
       setSimulatedProgress(100);
       clearInterval(interval);
@@ -196,6 +198,7 @@ export function ImportClient() {
       setCsvHeaders([]);
       setColumnSamples({});
       setMapping({});
+      setStrictMode(false);
       void refetchImports();
     } catch (err) {
       clearInterval(interval);
@@ -399,6 +402,28 @@ export function ImportClient() {
                     );
                   })}
                 </div>
+
+                <div className="p-4 rounded-xl border border-[var(--glass-border)] bg-white/[0.01] space-y-2 mt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-xs font-semibold text-[var(--color-text-primary)]">
+                        Strict Historical Validation
+                      </h5>
+                      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 max-w-[85%] leading-normal">
+                        Verify if users were active members on the exact date of each expense. Default (Assignment Mode) allows any current group member to import successfully.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={strictMode}
+                        onChange={(e) => setStrictMode(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               {/* Action Buttons */}
@@ -500,17 +525,15 @@ export function ImportClient() {
               </div>
 
               {(uploadSuccess.anomalyCount ?? 0) > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setInspectSessionId(uploadSuccess.id);
-                    setActiveTab("history");
-                  }}
-                  className="mt-1"
-                >
-                  Explore Anomalies <ChevronRight className="h-3 w-3 ml-1" />
-                </Button>
+                <Link href={`/import/${uploadSuccess.id}`}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-1"
+                  >
+                    Explore Anomalies <ChevronRight className="h-3 w-3 ml-1" />
+                  </Button>
+                </Link>
               )}
             </div>
           )}
@@ -531,52 +554,41 @@ export function ImportClient() {
           </div>
         </div>
       ) : (
-        /* History & Anomaly Explorer Tab */
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-          {/* History list */}
-          <div className="lg:col-span-2 space-y-4">
+        /* History & Anomaly Summary Tab */
+        <div className="space-y-4 max-w-4xl mx-auto">
+          <div className="flex justify-between items-center">
             <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-              Sessions Log ({imports.length})
+              Import Sessions Log ({imports.length})
             </h3>
+          </div>
 
-            {imports.length === 0 ? (
-              <div className="glass rounded-xl p-8 text-center text-xs text-[var(--color-text-muted)]">
-                No past CSV imports logged for this group.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {imports.map((session) => {
-                  const isInspected = inspectSessionId === session.id;
-                  const dateStr = new Date(session.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  });
 
-                  return (
-                    <div
-                      key={session.id}
-                      onClick={() => setInspectSessionId(session.id)}
-                      className={`glass rounded-xl p-4 cursor-pointer transition-all border text-left flex justify-between items-center gap-3 ${isInspected
-                        ? "border-[var(--color-primary-light)] bg-[var(--color-primary)]/5"
-                        : "border-[var(--glass-border)] hover:border-white/10"
-                        }`}
-                    >
-                      <div className="min-w-0">
-                        <h4 className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+          {imports.length === 0 ? (
+            <div className="glass rounded-xl p-8 text-center text-xs text-[var(--color-text-muted)]">
+              No past CSV imports logged for this group.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {imports.map((session) => {
+                const dateStr = new Date(session.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                });
+                const imported = session.importedRows ?? (session.processedCount - session.errorCount);
+                const rejected = session.rejectedRows ?? session.errorCount;
+                const anomaliesCount = session.anomalyCount ?? 0;
+
+                return (
+                  <div
+                    key={session.id}
+                    className="glass rounded-xl p-5 border border-[var(--glass-border)] flex flex-col justify-between gap-4 hover:border-white/10 transition-all"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="text-sm font-semibold text-[var(--color-text-primary)] truncate" title={session.filename}>
                           {session.filename}
                         </h4>
-                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
-                          {dateStr} • {session.rowCount} total rows
-                        </p>
-                        <div className="flex gap-3 text-[10px] font-semibold mt-2.5">
-                          <span className="text-[var(--color-success-light)]">+{session.importedRows ?? session.rowCount - (session.rejectedRows ?? 0)}</span>
-                          {(session.rejectedRows ?? 0) > 0 && <span className="text-[var(--color-danger-light)]">-{session.rejectedRows}</span>}
-                          {(session.anomalyCount ?? 0) > 0 && <span className="text-[var(--color-warning-light)]">!{session.anomalyCount}</span>}
-                        </div>
-                      </div>
-
-                      <div className="shrink-0 flex flex-col items-end gap-2">
                         <Badge
                           variant={
                             session.status === "COMPLETED"
@@ -591,184 +603,43 @@ export function ImportClient() {
                         >
                           {session.status}
                         </Badge>
-                        <ChevronRight className="h-4 w-4 text-[var(--color-text-muted)]" />
+                      </div>
+                      <p className="text-[10px] text-[var(--color-text-muted)]">
+                        Uploaded on {dateStr} • {session.rowCount} rows analyzed
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 py-2 text-center bg-white/[0.01] rounded-lg border border-white/[0.02]">
+                      <div>
+                        <p className="text-[10px] text-[var(--color-text-muted)] uppercase">Imported</p>
+                        <p className="text-xs font-bold text-[var(--color-success-light)]">+{imported}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-[var(--color-text-muted)] uppercase">Rejected</p>
+                        <p className="text-xs font-bold text-[var(--color-danger-light)]">{rejected}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-[var(--color-text-muted)] uppercase">Warnings</p>
+                        <p className="text-xs font-bold text-[var(--color-warning-light)]">!{anomaliesCount}</p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
 
-          {/* Inspected Session Details & Anomaly Explorer */}
-          <div className="lg:col-span-3 space-y-6">
-            {!inspectSessionId ? (
-              <div className="glass rounded-xl p-16 text-center">
-                <FileText className="h-8 w-8 text-[var(--color-text-muted)] mx-auto opacity-40 mb-3" />
-                <h4 className="text-sm font-semibold text-[var(--color-text-secondary)]">No session selected</h4>
-                <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                  Select an import session log from the list to explore reports, warnings, and processing anomalies.
-                </p>
-              </div>
-            ) : isSessionLoading ? (
-              <div className="glass rounded-xl p-6 space-y-4 animate-pulse">
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-32 w-full" />
-              </div>
-            ) : sessionDetail ? (
-              <div className="space-y-6">
-                {/* Session outcome overview */}
-                <div className="glass rounded-xl p-5 space-y-4">
-                  <div className="flex justify-between gap-4 items-start border-b border-[var(--glass-border)] pb-3">
-                    <div>
-                      <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-                        {sessionDetail.filename}
-                      </h3>
-                      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                        Import Session ID: {sessionDetail.id}
-                      </p>
-                    </div>
-                    <Badge variant={sessionDetail.status === "COMPLETED" ? "success" : sessionDetail.status === "FAILED" ? "danger" : "warning"} size="sm">
-                      {sessionDetail.status}
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                    <div>
-                      <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        Total Rows
-                      </p>
-                      <p className="text-lg font-bold text-[var(--color-text-primary)] mt-1">
-                        {sessionDetail.rowCount}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        Imported
-                      </p>
-                      <p className="text-lg font-bold text-[var(--color-success-light)] mt-1">
-                        {sessionDetail.importedRows ?? sessionDetail.rowCount - (sessionDetail.rejectedRows ?? 0)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        Rejected
-                      </p>
-                      <p className="text-lg font-bold text-[var(--color-danger-light)] mt-1">
-                        {sessionDetail.rejectedRows ?? 0}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        Anomalies
-                      </p>
-                      <p className="text-lg font-bold text-[var(--color-warning-light)] mt-1">
-                        {sessionDetail.anomalyCount ?? 0}
-                      </p>
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--glass-border)]">
+                      <Link href={`/import/${session.id}`} className="w-full">
+                        <Button variant="outline" size="sm" className="w-full justify-center">
+                          View Report <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                        </Button>
+                      </Link>
                     </div>
                   </div>
-                </div>
-
-                {/* Anomaly Explorer */}
-                <div className="glass rounded-xl p-5 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                      <ShieldAlert className="h-4.5 w-4.5 text-[var(--color-warning-light)]" /> Anomaly Explorer
-                    </h3>
-
-                    {/* Filter controls */}
-                    <div className="flex gap-2">
-                      <select
-                        value={anomalySeverity}
-                        onChange={(e) => setAnomalySeverity(e.target.value)}
-                        className="rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--color-text-primary)] text-xs px-2 py-1 focus:outline-none cursor-pointer"
-                      >
-                        <option value="all">All Severities</option>
-                        <option value="LOW">Low</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="HIGH">High</option>
-                        <option value="CRITICAL">Critical</option>
-                      </select>
-
-                      <select
-                        value={anomalyType}
-                        onChange={(e) => setAnomalyType(e.target.value)}
-                        className="rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--color-text-primary)] text-xs px-2 py-1 focus:outline-none cursor-pointer max-w-[150px]"
-                      >
-                        <option value="all">All Types</option>
-                        {uniqueAnomalyTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type.replace(/_/g, " ")}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {filteredAnomalies.length === 0 ? (
-                    <div className="py-10 text-center text-xs text-[var(--color-text-muted)] border border-dashed border-[var(--glass-border)] rounded-lg">
-                      No anomalies match the selected filters.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {filteredAnomalies.map((anomaly) => {
-                        const payloadMsg = String(anomaly.payload?.message || "Relational consistency warning");
-                        const rowNum =
-                          anomaly.payload?.rowNumber !== undefined && anomaly.payload?.rowNumber !== null
-                            ? String(anomaly.payload.rowNumber)
-                            : undefined;
-
-                        return (
-                          <div
-                            key={anomaly.id}
-                            className="p-3 rounded-lg border border-[var(--glass-border)] bg-white/[0.01] text-xs flex items-start justify-between gap-3 hover:bg-white/[0.02]"
-                          >
-                            <div className="space-y-1">
-                              <span className="font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                                <span className={`h-1.5 w-1.5 rounded-full ${anomaly.severity === "CRITICAL" || anomaly.severity === "HIGH"
-                                  ? "bg-[var(--color-danger-light)]"
-                                  : "bg-[var(--color-warning-light)]"
-                                  }`} />
-                                {anomaly.type.replace(/_/g, " ")}
-                              </span>
-                              <p className="text-[var(--color-text-secondary)] leading-relaxed">
-                                {payloadMsg}
-                              </p>
-                              {rowNum !== undefined && (
-                                <p className="text-[10px] text-[var(--color-text-muted)]">
-                                  Reference: CSV Row #{rowNum}
-                                </p>
-                              )}
-                            </div>
-
-                            <div className="shrink-0 text-right space-y-1">
-                              <Badge
-                                variant={
-                                  anomaly.severity === "CRITICAL" || anomaly.severity === "HIGH"
-                                    ? "danger"
-                                    : "warning"
-                                }
-                                size="sm"
-                              >
-                                {anomaly.severity}
-                              </Badge>
-                              <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">
-                                {anomaly.status}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
+
+

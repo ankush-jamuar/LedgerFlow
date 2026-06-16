@@ -1,11 +1,13 @@
 import { AnomalyStatus, ExpenseStatus, ImportStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { calculateGroupBalances } from "@/lib/balances";
+import { convertAmount } from "@/lib/currency/exchange";
 import {
   decimalToNumber,
   getAccessibleGroupIds,
   roundMoney,
 } from "@/lib/dashboard/analytics";
+
 import type {
   CurrencyAmount,
   DashboardAnomalyOverview,
@@ -146,21 +148,32 @@ export async function getDashboardAnomalyOverview(
 }
 
 export async function getDashboardReports(
-  actorId: string
+  actorId: string,
+  targetCurrency = "INR"
 ): Promise<DashboardReports> {
   const groupIds = await getAccessibleGroupIds(actorId);
-  const [expenses, settlements, imports] = await Promise.all([
+  const [expenses, settlements, imports, groups] = await Promise.all([
     prisma.expense.findMany({
       where: { groupId: { in: groupIds }, status: ExpenseStatus.ACTIVE },
+      include: { group: { select: { currency: true } } },
     }),
     prisma.settlement.findMany({
       where: { groupId: { in: groupIds } },
+      include: { group: { select: { currency: true } } },
     }),
     prisma.importSession.findMany({
       where: { groupId: { in: groupIds } },
       include: { anomalies: true },
     }),
+    prisma.group.findMany({
+      where: { id: { in: groupIds } },
+      select: { id: true, currency: true },
+    }),
   ]);
+
+  const groupCurrencyById = new Map(
+    groups.map((group) => [group.id, group.currency])
+  );
 
   const monthlySpending = new Map<string, number>();
   const monthlySettlements = new Map<string, number>();
@@ -168,14 +181,24 @@ export async function getDashboardReports(
   const currencyBreakdown = new Map<string, number>();
 
   for (const expense of expenses) {
-    const amount = decimalToNumber(expense.baseAmount);
+    const amount = convertAmount(
+      decimalToNumber(expense.baseAmount),
+      expense.group.currency,
+      targetCurrency
+    );
     addToMap(monthlySpending, monthKey(expense.date), amount);
     addToMap(topPayers, expense.paidById, amount);
+    
+    // Currency breakdown: convert to target currency
     addToMap(currencyBreakdown, expense.originalCurrency, amount);
   }
 
   for (const settlement of settlements) {
-    const amount = decimalToNumber(settlement.baseAmount);
+    const amount = convertAmount(
+      decimalToNumber(settlement.baseAmount),
+      settlement.group.currency,
+      targetCurrency
+    );
     addToMap(monthlySettlements, monthKey(settlement.settledAt), amount);
     addToMap(currencyBreakdown, settlement.originalCurrency, amount);
   }
@@ -184,12 +207,18 @@ export async function getDashboardReports(
   const creditorTotals = new Map<string, number>();
   for (const groupId of groupIds) {
     const balances = await calculateGroupBalances(actorId, groupId);
+    const groupCurrency = groupCurrencyById.get(groupId) ?? targetCurrency;
     for (const member of balances.members) {
-      if (member.netBalance < 0) {
-        addToMap(debtorTotals, member.userId, Math.abs(member.netBalance));
+      const convertedBalance = convertAmount(
+        member.netBalance,
+        groupCurrency,
+        targetCurrency
+      );
+      if (convertedBalance < 0) {
+        addToMap(debtorTotals, member.userId, Math.abs(convertedBalance));
       }
-      if (member.netBalance > 0) {
-        addToMap(creditorTotals, member.userId, member.netBalance);
+      if (convertedBalance > 0) {
+        addToMap(creditorTotals, member.userId, convertedBalance);
       }
     }
   }
@@ -219,3 +248,4 @@ export async function getDashboardReports(
     },
   };
 }
+
